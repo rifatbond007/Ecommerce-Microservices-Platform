@@ -1,12 +1,108 @@
 # System Design Documentation
 
+<style>
+html {
+  scroll-behavior: smooth;
+}
+details > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+details > summary:hover {
+  background: #e8e8e8;
+}
+details > ul {
+  margin-top: 8px;
+  padding-left: 20px;
+}
+details > ul > li {
+  margin: 4px 0;
+}
+a {
+  color: #0066cc;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+</style>
+
+> Click any section to jump directly to that content
+
 ## 📚 Table of Contents
 
-- [🏗️ High Level Design](#high-level-design)
-- [🔩 Low Level Design](#low-level-design)
-- [📈 Scalability](#scalability)
-- [🔐 Security](#security)
-- [📋 API Contracts](#api-contracts)
+<details>
+<summary><strong>🏗️ High Level Design</strong></summary>
+
+- [Overview](#overview)
+- [Service Architecture](#service-architecture)
+- [Client to Services Flow](#client-to-services-flow)
+- [Sync vs Async](#synchronous-vs-asynchronous-communication)
+- [Service Communication Map](#service-communication-map)
+- [CDN Strategy](#cdn-strategy-for-static-assets)
+- [Redis Caching](#redis-caching-layer)
+- [Data Flows](#complete-data-flows)
+</details>
+
+<details>
+<summary><strong>🔩 Low Level Design</strong></summary>
+
+- [Service Module Structure](#service-internal-module-structure)
+- [Express.js Architecture](#expressjs-layer-architecture)
+- [Database Patterns](#database-query-patterns)
+- [Redis Caching Strategy](#redis-caching-strategy-per-service)
+- [RabbitMQ Events](#rabbitmq-event-naming-convention)
+- [Error Handling](#error-handling-pattern)
+- [Logging](#logging-strategy)
+- [Code Flows](#internal-code-flows)
+</details>
+
+<details>
+<summary><strong>📈 Scalability</strong></summary>
+
+- [Bottlenecks](#current-architecture-bottlenecks)
+- [Horizontal Scaling](#horizontal-scaling-plan-by-service)
+- [Database Scaling](#database-scaling)
+- [Redis Scaling](#redis-scaling-strategy)
+- [RabbitMQ Scaling](#rabbitmq-scaling)
+- [Load Balancing](#api-gateway-load-balancing)
+- [Flash Sale Handling](#flash-sale-traffic-spike-handling)
+- [Performance Benchmarks](#performance-benchmarks-to-target)
+</details>
+
+<details>
+<summary><strong>🔐 Security</strong></summary>
+
+- [JWT Flow](#jwt-access-token--refresh-token-complete-flow)
+- [API Gateway Auth](#api-gateway-jwt-validation)
+- [RBAC](#role-based-access-control-rbac)
+- [Rate Limiting](#api-rate-limiting-strategy)
+- [Input Validation](#input-validation-and-sanitization)
+- [SQL Injection](#sql-injection-prevention)
+- [XSS & CSRF](#xss-and-csrf-protection)
+- [Payment Security](#payment-security-basics)
+- [Encryption](#sensitive-data-encryption)
+- [Environment Variables](#environment-variables-security)
+- [CORS](#cors-configuration)
+- [Attack Prevention](#attack-prevention)
+</details>
+
+<details>
+<summary><strong>📋 API Contracts</strong></summary>
+
+- [Request Format](#standard-request-format)
+- [Response Format](#standard-response-format)
+- [Error Format](#standard-error-response)
+- [API Versioning](#api-versioning-strategy)
+- [Authentication Header](#authentication-header-standard)
+- [Pagination](#pagination-standard)
+- [Service APIs](#api-contracts-by-service)
+- [RabbitMQ Events](#rabbitmq-event-contracts)
+</details>
 
 ---
 
@@ -23,15 +119,15 @@ The platform consists of the following microservices:
 | Service | Port | Responsibility | Database |
 |---------|------|----------------|----------|
 | API Gateway | 3000 | Request routing, auth, rate limiting | - |
-| Auth Service | 3001 | User authentication, JWT management | auth_service |
-| User Service | 3002 | Profile, addresses, reviews | user_service |
-| Product Service | 3003 | Catalog, categories, inventory | product_service |
-| Cart Service | 3004 | Shopping cart management | cart_service |
-| Order Service | 3005 | Order processing, history | order_service |
-| Payment Service | 3006 | Payment processing | payment_service |
-| Notification Service | 3007 | Email, SMS, push notifications | notification_service |
-| Search Service | 3008 | Product search, suggestions | search_service |
-| Admin Service | 3009 | Dashboard, analytics, management | admin_service |
+| Auth Service | 3001 | User authentication, JWT management | auth |
+| User Service | 3002 | Profile, addresses, reviews | user |
+| Product Service | 3003 | Catalog, categories, inventory | product |
+| Cart Service | 3004 | Shopping cart management | cart |
+| Order Service | 3005 | Order processing, history | order |
+| Payment Service | 3006 | Payment processing | payment |
+| Notification Service | 3007 | Email, SMS, push notifications | notification |
+| Search Service | 3008 | Product search, suggestions | search |
+| Admin Service | 3009 | Dashboard, analytics, management | admin |
 
 ## Client to Services Flow
 
