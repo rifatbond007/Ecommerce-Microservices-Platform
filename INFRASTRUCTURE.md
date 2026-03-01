@@ -214,7 +214,7 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 
 # Frontend URL (for CORS)
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3001
 ```
 
 ### Service-Specific .env Files
@@ -248,6 +248,50 @@ JWT_REFRESH_EXPIRES_IN=7d
 PORT=3002
 SERVICE_NAME=user-service
 DATABASE_SCHEMA=user
+DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+```
+
+#### Product Service (.env)
+
+```env
+PORT=3003
+SERVICE_NAME=product-service
+DATABASE_SCHEMA=product
+DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+```
+
+#### Cart Service (.env)
+
+```env
+PORT=3004
+SERVICE_NAME=cart-service
+DATABASE_SCHEMA=cart
+DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+```
+
+#### Order Service (.env)
+
+```env
+PORT=3005
+SERVICE_NAME=order-service
+DATABASE_SCHEMA=order
+DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+```
+
+#### Payment Service (.env)
+
+```env
+PORT=3006
+SERVICE_NAME=payment-service
+DATABASE_SCHEMA=payment
 DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
@@ -338,6 +382,17 @@ REDIS_URL=redis://localhost:6379
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 ```
 
+#### Admin Service (.env)
+
+```env
+PORT=3009
+SERVICE_NAME=admin-service
+DATABASE_SCHEMA=admin
+DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+```
+
 #### API Gateway (.env)
 
 ```env
@@ -359,7 +414,7 @@ SEARCH_SERVICE_URL=http://localhost:3008
 ADMIN_SERVICE_URL=http://localhost:3009
 
 # Frontend
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3001
 ```
 
 #### Frontend (.env.local)
@@ -371,6 +426,9 @@ NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:3000
 # Authentication
 NEXT_PUBLIC_AUTH_TOKEN_KEY=auth_token
 NEXT_PUBLIC_REFRESH_TOKEN_KEY=refresh_token
+
+# Development Server
+NEXT_PUBLIC_DEV_URL=http://localhost:3001
 ```
 
 ---

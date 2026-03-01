@@ -38,7 +38,7 @@ The platform consists of the following microservices:
 ```mermaid
 flowchart TB
     subgraph Client["Frontend - Next.js"]
-        Web["Web App<br/>localhost:3000"]
+        Web["Web App<br/>localhost:3001"]
         Mobile["Mobile App"]
     end
     
@@ -2517,8 +2517,7 @@ const corsOptions = cors({
     const allowedOrigins = [
       'https://www.example.com',
       'https://example.com',
-      'http://localhost:3000', // Development
-      'http://localhost:3001'   // Development
+      'http://localhost:3001'   // Frontend development
     ];
     
     // Allow requests with no origin (mobile apps, curl)

@@ -79,7 +79,7 @@ This document outlines the database schemas for each microservice in the e-comme
 
 ## 2. Auth Service
 
-**Database/Schema:** `auth_service`
+**Database/Schema:** `auth`
 
 ### Tables
 
@@ -212,7 +212,7 @@ This document outlines the database schemas for each microservice in the e-comme
 | Column | Data Type | Constraints | Description |
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique profile identifier |
-| user_id | UUID | NOT NULL, UNIQUE | Reference to auth_service.users |
+| user_id | UUID | NOT NULL, UNIQUE | Reference to auth.users |
 | date_of_birth | DATE | NULLABLE | Date of birth |
 | gender | VARCHAR(20) | NULLABLE | Gender |
 | language | VARCHAR(10) | NOT NULL DEFAULT 'en' | Preferred language |
@@ -235,7 +235,7 @@ This document outlines the database schemas for each microservice in the e-comme
 | Column | Data Type | Constraints | Description |
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique address identifier |
-| user_id | UUID | NOT NULL | Reference to auth_service.users |
+| user_id | UUID | NOT NULL | Reference to auth.users |
 | type | VARCHAR(20) | NOT NULL DEFAULT 'shipping' | Address type (billing/shipping) |
 | is_default | BOOLEAN | NOT NULL DEFAULT false | Default address flag |
 | first_name | VARCHAR(100) | NOT NULL | First name |
@@ -261,7 +261,7 @@ This document outlines the database schemas for each microservice in the e-comme
 | Column | Data Type | Constraints | Description |
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique wishlist identifier |
-| user_id | UUID | NOT NULL | Reference to auth_service.users |
+| user_id | UUID | NOT NULL | Reference to auth.users |
 | name | VARCHAR(100) | NOT NULL DEFAULT 'My Wishlist' | Wishlist name |
 | is_public | BOOLEAN | NOT NULL DEFAULT false | Public visibility |
 | created_at | TIMESTAMP | NOT NULL DEFAULT NOW() | Record creation time |
@@ -292,7 +292,7 @@ This document outlines the database schemas for each microservice in the e-comme
 | Column | Data Type | Constraints | Description |
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique review identifier |
-| user_id | UUID | NOT NULL | Reference to auth_service.users |
+| user_id | UUID | NOT NULL | Reference to auth.users |
 | product_id | UUID | NOT NULL | Reference to product_service.products |
 | order_id | UUID | NULLABLE | Reference to order_service.orders |
 | rating | INTEGER | NOT NULL CHECK (rating >= 1 AND rating <= 5) | Star rating (1-5) |
@@ -325,11 +325,11 @@ This document outlines the database schemas for each microservice in the e-comme
 
 ### Relationships
 
-- **profiles** 1:1 **auth_service.users** (One profile per user)
-- **addresses** N:1 **auth_service.users** (One user can have multiple addresses)
-- **wishlists** N:1 **auth_service.users** (One user can have multiple wishlists)
+- **profiles** 1:1 **auth.users** (One profile per user)
+- **addresses** N:1 **auth.users** (One user can have multiple addresses)
+- **wishlists** N:1 **auth.users** (One user can have multiple wishlists)
 - **wishlist_items** N:1 **wishlists** (One wishlist can have multiple items)
-- **reviews** N:1 **auth_service.users** (One user can write multiple reviews)
+- **reviews** N:1 **auth.users** (One user can write multiple reviews)
 - **reviews** N:1 **product_service.products** (One product can have multiple reviews)
 - **review_helpful** N:1 **reviews** (One review can have multiple helpful votes)
 
@@ -607,7 +607,7 @@ This document outlines the database schemas for each microservice in the e-comme
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique cart identifier |
 | session_id | UUID | NULLABLE | Anonymous session ID |
-| user_id | UUID | NULLABLE, REFERENCES auth_service.users(id) | Authenticated user |
+| user_id | UUID | NULLABLE, REFERENCES auth.users(id) | Authenticated user |
 | currency | VARCHAR(3) | NOT NULL DEFAULT 'USD' | Cart currency |
 | subtotal | DECIMAL(12, 2) | NOT NULL DEFAULT 0 | Items subtotal |
 | tax_total | DECIMAL(12, 2) | NOT NULL DEFAULT 0 | Tax amount |
@@ -647,7 +647,7 @@ This document outlines the database schemas for each microservice in the e-comme
 | Column | Data Type | Constraints | Description |
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique saved cart identifier |
-| user_id | UUID | NOT NULL, REFERENCES auth_service.users(id) | User ID |
+| user_id | UUID | NOT NULL, REFERENCES auth.users(id) | User ID |
 | name | VARCHAR(100) | NOT NULL | Cart name |
 | items | JSONB | NOT NULL DEFAULT '[]' | Serialized cart items |
 | original_cart_id | UUID | NULLABLE | Original cart reference |
@@ -659,9 +659,9 @@ This document outlines the database schemas for each microservice in the e-comme
 
 ### Relationships
 
-- **carts** 1:1 **auth_service.users** (Optional user association)
+- **carts** 1:1 **auth.users** (Optional user association)
 - **cart_items** N:1 **carts** (Many items per cart)
-- **saved_carts** N:1 **auth_service.users** (One user can have multiple saved carts)
+- **saved_carts** N:1 **auth.users** (One user can have multiple saved carts)
 
 ### Redis Cache Keys
 
@@ -692,7 +692,7 @@ This document outlines the database schemas for each microservice in the e-comme
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique order identifier |
 | order_number | VARCHAR(20) | NOT NULL, UNIQUE | Human-readable order number |
-| user_id | UUID | NOT NULL | Reference to auth_service.users |
+| user_id | UUID | NOT NULL | Reference to auth.users |
 | cart_id | UUID | NULLABLE | Reference to cart_service.carts |
 | status | VARCHAR(30) | NOT NULL DEFAULT 'pending' | Order status |
 | fulfillment_status | VARCHAR(30) | NOT NULL DEFAULT 'unfulfilled' | Fulfillment status |
@@ -817,7 +817,7 @@ This document outlines the database schemas for each microservice in the e-comme
 
 ### Relationships
 
-- **orders** N:1 **auth_service.users** (Many orders per user)
+- **orders** N:1 **auth.users** (Many orders per user)
 - **orders** N:1 **cart_service.carts** (One cart per order)
 - **orders** N:1 **user_service.addresses** (Shipping and billing)
 - **order_items** N:1 **orders** (Many items per order)
@@ -857,7 +857,7 @@ This document outlines the database schemas for each microservice in the e-comme
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique payment identifier |
 | order_id | UUID | NOT NULL | Reference to order_service.orders |
-| user_id | UUID | NOT NULL | Reference to auth_service.users |
+| user_id | UUID | NOT NULL | Reference to auth.users |
 | amount | DECIMAL(12, 2) | NOT NULL | Payment amount |
 | currency | VARCHAR(3) | NOT NULL DEFAULT 'USD' | Payment currency |
 | method | VARCHAR(50) | NOT NULL | Payment method |
@@ -880,7 +880,7 @@ This document outlines the database schemas for each microservice in the e-comme
 | Column | Data Type | Constraints | Description |
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique payment method ID |
-| user_id | UUID | NOT NULL, REFERENCES auth_service.users(id) | User ID |
+| user_id | UUID | NOT NULL, REFERENCES auth.users(id) | User ID |
 | type | VARCHAR(50) | NOT NULL | Payment method type |
 | provider | VARCHAR(50) | NOT NULL | Payment provider |
 | provider_payment_method_id | VARCHAR(255) | NULLABLE | Provider method ID |
@@ -922,7 +922,7 @@ This document outlines the database schemas for each microservice in the e-comme
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique invoice identifier |
 | invoice_number | VARCHAR(20) | NOT NULL, UNIQUE | Human-readable invoice number |
 | order_id | UUID | NOT NULL | Reference to order_service.orders |
-| user_id | UUID | NOT NULL | Reference to auth_service.users |
+| user_id | UUID | NOT NULL | Reference to auth.users |
 | amount | DECIMAL(12, 2) | NOT NULL | Invoice amount |
 | tax_amount | DECIMAL(12, 2) | NOT NULL DEFAULT 0 | Tax amount |
 | total | DECIMAL(12, 2) | NOT NULL | Total amount |
@@ -939,11 +939,11 @@ This document outlines the database schemas for each microservice in the e-comme
 ### Relationships
 
 - **payments** N:1 **order_service.orders** (Many payments per order)
-- **payments** N:1 **auth_service.users** (Many payments per user)
-- **payment_methods** N:1 **auth_service.users** (Many payment methods per user)
+- **payments** N:1 **auth.users** (Many payments per user)
+- **payment_methods** N:1 **auth.users** (Many payment methods per user)
 - **transactions** N:1 **payments** (Many transactions per payment)
 - **invoices** N:1 **order_service.orders** (One invoice per order)
-- **invoices** N:1 **auth_service.users** (One user per invoice)
+- **invoices** N:1 **auth.users** (One user per invoice)
 
 ### Redis Cache Keys
 
@@ -956,7 +956,7 @@ This document outlines the database schemas for each microservice in the e-comme
 ### Cross-Service Reference Strategy
 
 - Store `order_id` (UUID) reference to order_service.orders
-- Store `user_id` (UUID) reference to auth_service.users
+- Store `user_id` (UUID) reference to auth.users
 - Use RabbitMQ to receive order created events
 - Publish payment completed/failed events to RabbitMQ
 
@@ -1078,10 +1078,10 @@ This document outlines the database schemas for each microservice in the e-comme
 
 ### Relationships
 
-- **notifications** 1:1 **auth_service.users** (Recipient)
+- **notifications** 1:1 **auth.users** (Recipient)
 - **notification_templates** 1:N **email_queue** (Template usage)
 - **notification_templates** 1:N **sms_queue** (Template usage)
-- **push_subscriptions** N:1 **auth_service.users** (User subscriptions)
+- **push_subscriptions** N:1 **auth.users** (User subscriptions)
 
 ### Redis Cache Keys
 
@@ -1186,7 +1186,7 @@ Search service primarily uses Elasticsearch/OpenSearch for product search. The P
 | Column | Data Type | Constraints | Description |
 |--------|-----------|-------------|-------------|
 | id | UUID | PRIMARY KEY DEFAULT gen_random_uuid() | Unique admin user ID |
-| user_id | UUID | NOT NULL, UNIQUE | Reference to auth_service.users |
+| user_id | UUID | NOT NULL, UNIQUE | Reference to auth.users |
 | role | VARCHAR(50) | NOT NULL DEFAULT 'staff' | Admin role |
 | department | VARCHAR(100) | NULLABLE | Department |
 | permissions | JSONB | NOT NULL DEFAULT '[]' | Specific permissions |
@@ -1273,7 +1273,7 @@ Search service primarily uses Elasticsearch/OpenSearch for product search. The P
 
 ### Relationships
 
-- **admin_users** 1:1 **auth_service.users** (Admin is also a user)
+- **admin_users** 1:1 **auth.users** (Admin is also a user)
 - **audit_logs** N:1 **admin_users** (Admin actions tracked)
 - **reports** N:1 **admin_users** (Reports created by admins)
 - **webhooks** 1:N **webhook_deliveries** (Many deliveries per webhook)
@@ -1298,7 +1298,7 @@ Search service primarily uses Elasticsearch/OpenSearch for product search. The P
 
 ### Pattern 1: ID-Based References
 Each service stores only the UUID primary keys of related entities from other services:
-- `user_id` references auth_service.users
+- `user_id` references auth.users
 - `product_id` references product_service.products
 - `order_id` references order_service.orders
 
