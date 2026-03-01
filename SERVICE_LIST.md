@@ -15,14 +15,14 @@
 
 | Method | Route | Upstream | Auth |
 |-------|-------|----------|------|
-| * | /api/auth/* | Auth Service (3001) | varies |
-| * | /api/users/* | User Service (3002) | Yes |
-| * | /api/products/* | Product Service (3003) | varies |
-| * | /api/cart/* | Cart Service (3004) | Yes |
-| * | /api/orders/* | Order Service (3005) | Yes |
-| * | /api/payments/* | Payment Service (3006) | Yes |
-| * | /api/search/* | Search Service (3008) | No |
-| * | /api/admin/* | Admin Service (3009) | Yes (Admin) |
+| * | /api/v1/auth/* | Auth Service (3001) | varies |
+| * | /api/v1/users/* | User Service (3002) | Yes |
+| * | /api/v1/products/* | Product Service (3003) | varies |
+| * | /api/v1/cart/* | Cart Service (3004) | Yes |
+| * | /api/v1/orders/* | Order Service (3005) | Yes |
+| * | /api/v1/payments/* | Payment Service (3006) | Yes |
+| * | /api/v1/search/* | Search Service (3008) | No |
+| * | /api/v1/admin/* | Admin Service (3009) | Yes (Admin) |
 
 ### RabbitMQ Events
 
@@ -67,12 +67,12 @@ CREATE TABLE users (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| POST | /auth/register | Register new user | No |
-| POST | /auth/login | Login user | No |
-| POST | /auth/refresh | Refresh access token | No |
-| POST | /auth/logout | Logout user | Yes |
-| GET | /auth/verify | Verify token validity | Yes |
-| GET | /auth/me | Get current user | Yes |
+| POST | /api/v1/auth/register | Register new user | No |
+| POST | /api/v1/auth/login | Login user | No |
+| POST | /api/v1/auth/refresh | Refresh access token | No |
+| POST | /api/v1/auth/logout | Logout user | Yes |
+| GET | /api/v1/auth/verify | Verify token validity | Yes |
+| GET | /api/v1/auth/me | Get current user | Yes |
 
 ### RabbitMQ Events
 
@@ -133,12 +133,12 @@ CREATE TABLE addresses (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| GET | /users/me | Get current user profile | Yes |
-| PUT | /users/me | Update profile | Yes |
-| GET | /users/me/addresses | List addresses | Yes |
-| POST | /users/me/addresses | Add address | Yes |
-| PUT | /users/me/addresses/:id | Update address | Yes |
-| DELETE | /users/me/addresses/:id | Delete address | Yes |
+| GET | /api/v1/users/me | Get current user profile | Yes |
+| PUT | /api/v1/users/me | Update profile | Yes |
+| GET | /api/v1/users/me/addresses | List addresses | Yes |
+| POST | /api/v1/users/me/addresses | Add address | Yes |
+| PUT | /api/v1/users/me/addresses/:id | Update address | Yes |
+| DELETE | /api/v1/users/me/addresses/:id | Delete address | Yes |
 
 ### RabbitMQ Events
 
@@ -209,15 +209,15 @@ CREATE TABLE product_variants (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| GET | /products | List products (paginated) | No |
-| GET | /products/:id | Get product details | No |
-| GET | /products/slug/:slug | Get product by slug | No |
-| GET | /products/search | Search products | No |
-| POST | /products | Create product | Yes (Admin) |
-| PUT | /products/:id | Update product | Yes (Admin) |
-| DELETE | /products/:id | Delete product | Yes (Admin) |
-| GET | /categories | List categories | No |
-| POST | /categories | Create category | Yes (Admin) |
+| GET | /api/v1/products | List products (paginated) | No |
+| GET | /api/v1/products/:id | Get product details | No |
+| GET | /api/v1/products/slug/:slug | Get product by slug | No |
+| GET | /api/v1/products/search | Search products | No |
+| POST | /api/v1/products | Create product | Yes (Admin) |
+| PUT | /api/v1/products/:id | Update product | Yes (Admin) |
+| DELETE | /api/v1/products/:id | Delete product | Yes (Admin) |
+| GET | /api/v1/categories | List categories | No |
+| POST | /api/v1/categories | Create category | Yes (Admin) |
 
 ### RabbitMQ Events
 
@@ -272,12 +272,12 @@ CREATE TABLE cart_items (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| GET | /cart | Get current user's cart | Yes |
-| POST | /cart/items | Add item to cart | Yes |
-| PUT | /cart/items/:id | Update item quantity | Yes |
-| DELETE | /cart/items/:id | Remove item from cart | Yes |
-| DELETE | /cart | Clear cart | Yes |
-| POST | /cart/checkout | Convert cart to order | Yes |
+| GET | /api/v1/cart | Get current user's cart | Yes |
+| POST | /api/v1/cart/items | Add item to cart | Yes |
+| PUT | /api/v1/cart/items/:id | Update item quantity | Yes |
+| DELETE | /api/v1/cart/items/:id | Remove item from cart | Yes |
+| DELETE | /api/v1/cart | Clear cart | Yes |
+| POST | /api/v1/cart/checkout | Convert cart to order | Yes |
 
 ### RabbitMQ Events
 
@@ -350,11 +350,11 @@ CREATE TABLE order_status_history (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| GET | /orders | List user orders | Yes |
-| GET | /orders/:id | Get order details | Yes |
-| POST | /orders | Create new order | Yes |
-| PUT | /orders/:id/status | Update order status | Yes (Admin) |
-| GET | /orders/:id/tracking | Get tracking info | Yes |
+| GET | /api/v1/orders | List user orders | Yes |
+| GET | /api/v1/orders/:id | Get order details | Yes |
+| POST | /api/v1/orders | Create new order | Yes |
+| PUT | /api/v1/orders/:id/status | Update order status | Yes (Admin) |
+| GET | /api/v1/orders/:id/tracking | Get tracking info | Yes |
 
 ### RabbitMQ Events
 
@@ -419,11 +419,11 @@ CREATE TABLE refunds (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| POST | /payments/process | Process payment | Yes |
-| GET | /payments/:orderId | Get payment by order | Yes |
-| GET | /payments/:id | Get payment details | Yes |
-| POST | /payments/:id/refund | Request refund | Yes |
-| POST | /webhooks/stripe | Stripe webhook handler | No |
+| POST | /api/v1/payments/process | Process payment | Yes |
+| GET | /api/v1/payments/:orderId | Get payment by order | Yes |
+| GET | /api/v1/payments/:id | Get payment details | Yes |
+| POST | /api/v1/payments/:id/refund | Request refund | Yes |
+| POST | /api/v1/webhooks/stripe | Stripe webhook handler | No |
 
 ### RabbitMQ Events
 
@@ -482,9 +482,9 @@ CREATE TABLE notifications (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| GET | /notifications | List user notifications | Yes |
-| PUT | /notifications/preferences | Update preferences | Yes |
-| GET | /notifications/preferences | Get preferences | Yes |
+| GET | /api/v1/notifications | List user notifications | Yes |
+| PUT | /api/v1/notifications/preferences | Update preferences | Yes |
+| GET | /api/v1/notifications/preferences | Get preferences | Yes |
 
 ### RabbitMQ Events
 
@@ -533,9 +533,9 @@ CREATE TABLE search_logs (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| GET | /search/products | Search products | No |
-| GET | /search/suggestions | Get search suggestions | No |
-| GET | /search/trending | Get trending searches | No |
+| GET | /api/v1/search/products | Search products | No |
+| GET | /api/v1/search/suggestions | Get search suggestions | No |
+| GET | /api/v1/search/trending | Get trending searches | No |
 
 ### RabbitMQ Events
 
@@ -579,15 +579,15 @@ CREATE TABLE admin_users (
 
 | Method | Route | Description | Auth |
 |-------|-------|-------------|------|
-| GET | /admin/analytics/overview | Dashboard overview | Yes (Admin) |
-| GET | /admin/analytics/sales | Sales analytics | Yes (Admin) |
-| GET | /admin/analytics/users | User analytics | Yes (Admin) |
-| GET | /admin/users | List all users | Yes (Admin) |
-| PUT | /admin/users/:id | Update user | Yes (Admin) |
-| GET | /admin/products | List all products | Yes (Admin) |
-| PUT | /admin/products/:id | Update product | Yes (Admin) |
-| GET | /admin/orders | List all orders | Yes (Admin) |
-| PUT | /admin/orders/:id/status | Update order | Yes (Admin) |
+| GET | /api/v1/admin/analytics/overview | Dashboard overview | Yes (Admin) |
+| GET | /api/v1/admin/analytics/sales | Sales analytics | Yes (Admin) |
+| GET | /api/v1/admin/analytics/users | User analytics | Yes (Admin) |
+| GET | /api/v1/admin/users | List all users | Yes (Admin) |
+| PUT | /api/v1/admin/users/:id | Update user | Yes (Admin) |
+| GET | /api/v1/admin/products | List all products | Yes (Admin) |
+| PUT | /api/v1/admin/products/:id | Update product | Yes (Admin) |
+| GET | /api/v1/admin/orders | List all orders | Yes (Admin) |
+| PUT | /api/v1/admin/orders/:id/status | Update order | Yes (Admin) |
 
 ### RabbitMQ Events
 

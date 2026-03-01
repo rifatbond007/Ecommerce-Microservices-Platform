@@ -26,7 +26,7 @@ This e-commerce platform consists of 10 microservices, each responsible for a sp
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                              FRONTEND (Next.js)                          │
-│                              localhost:3000                              │
+│                              localhost:3001                              │
 └─────────────────────────────────┬───────────────────────────────────────┘
                                   │
                                   │ HTTPS/REST
@@ -131,27 +131,27 @@ datasource db {
 
 | Method | Path | Upstream Service | Auth Required |
 |--------|------|------------------|---------------|
-| POST | /api/auth/login | Auth Service (3001) | No |
-| POST | /api/auth/register | Auth Service (3001) | No |
-| POST | /api/auth/refresh | Auth Service (3001) | No |
-| POST | /api/auth/logout | Auth Service (3001) | Yes |
-| GET | /api/users/me | User Service (3002) | Yes |
-| PUT | /api/users/me | User Service (3002) | Yes |
-| GET | /api/users/me/addresses | User Service (3002) | Yes |
-| POST | /api/users/me/addresses | User Service (3002) | Yes |
-| GET | /api/products | Product Service (3003) | No |
-| GET | /api/products/:id | Product Service (3003) | No |
-| GET | /api/products/search | Search Service (3008) | No |
-| GET | /api/cart | Cart Service (3004) | Yes |
-| POST | /api/cart/items | Cart Service (3004) | Yes |
-| PUT | /api/cart/items/:id | Cart Service (3004) | Yes |
-| DELETE | /api/cart/items/:id | Cart Service (3004) | Yes |
-| POST | /api/orders | Order Service (3005) | Yes |
-| GET | /api/orders | Order Service (3005) | Yes |
-| GET | /api/orders/:id | Order Service (3005) | Yes |
-| POST | /api/payments/process | Payment Service (3006) | Yes |
-| GET | /api/payments/:orderId | Payment Service (3006) | Yes |
-| GET | /api/admin/analytics | Admin Service (3009) | Yes (Admin) |
+| POST | /api/v1/auth/login | Auth Service (3001) | No |
+| POST | /api/v1/auth/register | Auth Service (3001) | No |
+| POST | /api/v1/auth/refresh | Auth Service (3001) | No |
+| POST | /api/v1/auth/logout | Auth Service (3001) | Yes |
+| GET | /api/v1/users/me | User Service (3002) | Yes |
+| PUT | /api/v1/users/me | User Service (3002) | Yes |
+| GET | /api/v1/users/me/addresses | User Service (3002) | Yes |
+| POST | /api/v1/users/me/addresses | User Service (3002) | Yes |
+| GET | /api/v1/products | Product Service (3003) | No |
+| GET | /api/v1/products/:id | Product Service (3003) | No |
+| GET | /api/v1/products/search | Search Service (3008) | No |
+| GET | /api/v1/cart | Cart Service (3004) | Yes |
+| POST | /api/v1/cart/items | Cart Service (3004) | Yes |
+| PUT | /api/v1/cart/items/:id | Cart Service (3004) | Yes |
+| DELETE | /api/v1/cart/items/:id | Cart Service (3004) | Yes |
+| POST | /api/v1/orders | Order Service (3005) | Yes |
+| GET | /api/v1/orders | Order Service (3005) | Yes |
+| GET | /api/v1/orders/:id | Order Service (3005) | Yes |
+| POST | /api/v1/payments/process | Payment Service (3006) | Yes |
+| GET | /api/v1/payments/:orderId | Payment Service (3006) | Yes |
+| GET | /api/v1/admin/analytics | Admin Service (3009) | Yes (Admin) |
 
 ### Gateway Middleware Pipeline
 
@@ -170,7 +170,7 @@ Request → Rate Limit → CORS → Auth Check → Route → Upstream Service
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         NEXT.JS FRONTEND (3000)                         │
+│                         NEXT.JS FRONTEND (3001)                         │
 │                                                                          │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                 │
 │  │   Pages     │    │ Components  │    │   Hooks    │                 │

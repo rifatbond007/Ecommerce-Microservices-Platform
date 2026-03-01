@@ -211,8 +211,8 @@ npm run dev
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:3000 |
-| API Gateway | http://localhost:3001 |
+| Frontend | http://localhost:3001 |
+| API Gateway | http://localhost:3000 |
 | RabbitMQ Management | http://localhost:15672 |
 | PostgreSQL | localhost:5432 |
 | Redis | localhost:6379 |
