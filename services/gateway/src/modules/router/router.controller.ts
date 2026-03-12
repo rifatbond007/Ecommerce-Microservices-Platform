@@ -12,8 +12,15 @@ const proxy = httpProxy.createProxyServer({
 
 proxy.on('error', (err, req, res) => {
   logger.error('Proxy error:', err);
-  if (!res.headersSent) {
-    new ServiceUnavailableError('Upstream service unavailable');
+  const response = res as Response;
+  if (!response.headersSent) {
+    response.status(503).json({
+      success: false,
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Upstream service unavailable',
+      },
+    });
   }
 });
 

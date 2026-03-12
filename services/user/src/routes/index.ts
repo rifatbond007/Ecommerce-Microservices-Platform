@@ -1,5 +1,15 @@
 import { Router } from 'express';
-import { profilesRoutes, addressesRoutes, wishlistsRoutes, reviewsRoutes } from '../modules';
+import profilesRoutes from '../modules/profiles/profiles.route';
+import addressesRoutes from '../modules/addresses/addresses.route';
+import wishlistsRoutes from '../modules/wishlists/wishlists.route';
+import reviewsRoutes from '../modules/reviews/reviews.route';
+
+export {
+  profilesRoutes,
+  addressesRoutes,
+  wishlistsRoutes,
+  reviewsRoutes,
+};
 
 const router = Router();
 
