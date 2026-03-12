@@ -29,7 +29,6 @@ model User {
 
   roles        UserRole[]
   sessions     Session[]
-  loginAttempts LoginAttempt[]
 
   @@index([email], name: "idx_users_email")
   @@index([username], name: "idx_users_username")
@@ -41,7 +40,7 @@ model Role {
   id          Int       @id @default(autoincrement())
   name        String    @unique @map("name") @db.VarChar(50)
   description String?   @map("description") @db.Text
-  permissions Json      @default([]) @map("permissions") @db.Text
+  permissions Json      @default("[]") @map("permissions")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
