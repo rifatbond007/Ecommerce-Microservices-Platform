@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["api_gateway"]
+}
+
+model RateLimit {
+  id            Int       @id @default(autoincrement())
+  identifier    String    @map("identifier") @db.VarChar(255)
+  endpoint      String    @map("endpoint") @db.VarChar(500)
+  requestCount  Int       @map("request_count") @default(0)
+  windowStart   DateTime  @map("window_start")
+  windowDuration Int      @map("window_duration") @default(60)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([identifier, endpoint], name: "idx_rate_limits_identifier_endpoint")
+  @@index([windowStart], name: "idx_rate_limits_window_start")
+  @@map("rate_limits")
+}
+
+model ApiKey {
+  id           Int        @id @default(autoincrement())
+  keyHash      String     @unique @map("key_hash") @db.VarChar(255)
+  serviceName  String     @map("service_name") @db.VarChar(100)
+  permissions  Json       @default([]) @db.JsonB
+  rateLimit    Int        @map("rate_limit") @default(1000)
+  isActive     Boolean    @default(true) @map("is_active")
+  expiresAt    DateTime?  @map("expires_at")
+  lastUsedAt   DateTime?  @map("last_used_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@index([keyHash], name: "idx_api_keys_key_hash")
+  @@index([serviceName], name: "idx_api_keys_service_name")
+  @@map("api_keys")
+}
+
+model RouteConfig {
+  id                    Int       @id @default(autoincrement())
+  path                  String    @unique @db.VarChar(500)
+  method                String    @db.VarChar(10)
+  targetService         String    @map("target_service") @db.VarChar(100)
+  targetUrl             String    @map("target_url") @db.VarChar(500)
+  timeout               Int       @default(30000)
+  retryAttempts         Int       @map("retry_attempts") @default(3)
+  circuitBreakerThreshold Int     @map("circuit_breaker_threshold") @default(5)
+  authRequired          Boolean   @default(true) @map("auth_required")
+  rateLimit             Int?      @map("rate_limit")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@index([path, method], name: "idx_route_configs_path_method")
+  @@map("route_configs")
+}
