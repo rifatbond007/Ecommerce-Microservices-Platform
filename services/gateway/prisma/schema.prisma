@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["api_gateway"]
+
 }
 
 model RateLimit {
@@ -27,7 +27,7 @@ model ApiKey {
   id           Int        @id @default(autoincrement())
   keyHash      String     @unique @map("key_hash") @db.VarChar(255)
   serviceName  String     @map("service_name") @db.VarChar(100)
-  permissions  Json       @default([]) @db.JsonB
+  permissions  Json       @default("[]") @db.JsonB
   rateLimit    Int        @map("rate_limit") @default(1000)
   isActive     Boolean    @default(true) @map("is_active")
   expiresAt    DateTime?  @map("expires_at")
