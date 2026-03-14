@@ -137,16 +137,24 @@ export class UserRepository {
 
   async existsByEmail(email: string): Promise<boolean> {
     const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
+      where: {
+        email,  // Use the email parameter
+      },
+      select: {
+        id: true,
+      },
     });
     return !!user;
   }
 
   async existsByUsername(username: string): Promise<boolean> {
     const user = await prisma.user.findUnique({
-      where: { username },
-      select: { id: true },
+      where: {
+        username,  // Use the username parameter
+      },
+      select: {
+        id: true,
+      },
     });
     return !!user;
   }
