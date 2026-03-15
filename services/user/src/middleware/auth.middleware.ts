@@ -33,7 +33,11 @@ export const authenticate = async (
       },
     });
 
-    req.user = response.data.data;
+      req.user = {
+        userId: response.data.data.id,
+        email: response.data.data.email,
+        role: response.data.data.roles?.[0] || 'user',
+      };
     next();
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -61,7 +65,11 @@ export const optionalAuth = async (
         },
       });
 
-      req.user = response.data.data;
+    req.user = {
+      userId: response.data.data.id,
+      email: response.data.data.email,
+      role: response.data.data.roles?.[0] || 'user',
+    };
     }
   } catch {
     // Ignore errors for optional auth
