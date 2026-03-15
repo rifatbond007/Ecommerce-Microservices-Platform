@@ -5,7 +5,7 @@ import { UnauthorizedError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
 export interface JwtPayload {
-  sub: string;
+  userId: string;
   email: string;
   role: string;
   iat: number;

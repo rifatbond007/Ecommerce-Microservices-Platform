@@ -1,5 +1,5 @@
+import { Prisma } from '@prisma/client';
 import prisma from './prisma.client';
-import { NotFoundError } from '../utils/errors';
 
 export interface CreateProfileData {
   userId: string;
@@ -13,7 +13,7 @@ export interface CreateProfileData {
   company?: string;
   jobTitle?: string;
   newsletterSubscribed?: boolean;
-  notificationPreferences?: Record<string, unknown>;
+  notificationPreferences?: Prisma.InputJsonValue;
 }
 
 export interface UpdateProfileData {
@@ -27,7 +27,7 @@ export interface UpdateProfileData {
   company?: string | null;
   jobTitle?: string | null;
   newsletterSubscribed?: boolean;
-  notificationPreferences?: Record<string, unknown>;
+  notificationPreferences?: Prisma.InputJsonValue;
 }
 
 export class ProfileRepository {

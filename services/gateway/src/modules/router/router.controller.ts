@@ -62,7 +62,7 @@ export const proxyRequest = (serviceName: keyof typeof config.services) => {
     req.headers['x-original-path'] = req.path;
 
     if (req.user) {
-      req.headers['x-user-id'] = req.user.sub;
+      req.headers['x-user-id'] = req.user.userId;
       req.headers['x-user-email'] = req.user.email;
       req.headers['x-user-role'] = req.user.role;
     }

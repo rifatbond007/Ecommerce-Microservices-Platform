@@ -87,27 +87,25 @@ export class WishlistRepository {
   }
 
   async removeItem(wishlistId: string, productId: string, variantId?: string) {
-    return prisma.wishlistItem.delete({
+    return prisma.wishlistItem.deleteMany({
       where: {
-        wishlistId_productId_variantId: {
-          wishlistId,
-          productId,
-          variantId: variantId || null,
-        },
+        wishlistId,
+        productId,
+        variantId: variantId || null,
       },
     });
   }
 
   async findItem(wishlistId: string, productId: string, variantId?: string) {
-    return prisma.wishlistItem.findUnique({
+    const items = await prisma.wishlistItem.findMany({
       where: {
-        wishlistId_productId_variantId: {
-          wishlistId,
-          productId,
-          variantId: variantId || null,
-        },
+        wishlistId,
+        productId,
+        variantId: variantId || null,
       },
+      take: 1,
     });
+    return items[0] || null;
   }
 }
 

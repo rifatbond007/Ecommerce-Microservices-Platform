@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { profileRepository } from '../../repositories';
 import { NotFoundError, ConflictError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
@@ -50,7 +51,7 @@ export class ProfilesService {
       company: input.company,
       jobTitle: input.jobTitle,
       newsletterSubscribed: input.newsletterSubscribed,
-      notificationPreferences: input.notificationPreferences,
+      notificationPreferences: input.notificationPreferences as Prisma.InputJsonValue | undefined,
     });
 
     logger.info('Profile created', { userId });
@@ -76,7 +77,7 @@ export class ProfilesService {
       company: input.company,
       jobTitle: input.jobTitle,
       newsletterSubscribed: input.newsletterSubscribed,
-      notificationPreferences: input.notificationPreferences,
+      notificationPreferences: input.notificationPreferences as Prisma.InputJsonValue | undefined,
     });
 
     logger.info('Profile updated', { userId });

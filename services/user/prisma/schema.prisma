@@ -15,95 +15,92 @@ model Profile {
   language                String    @default("en") @map("language") @db.VarChar(10)
   timezone                String    @default("UTC") @map("timezone") @db.VarChar(50)
   currency                String    @default("USD") @map("currency") @db.VarChar(3)
-  bio                     String?   @db.Text
+  bio                     String?
   website                 String?   @map("website") @db.VarChar(255)
   company                 String?   @map("company") @db.VarChar(255)
   jobTitle                String?   @map("job_title") @db.VarChar(100)
   newsletterSubscribed    Boolean   @default(false) @map("newsletter_subscribed")
   notificationPreferences Json      @default("{}") @map("notification_preferences")
-  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@index([userId], name: "idx_profiles_user_id")
+  @@index([userId], map: "idx_profiles_user_id")
   @@map("profiles")
 }
 
 model Address {
-  id                    String    @id @default(uuid()) @db.Uuid
-  userId                String    @map("user_id") @db.Uuid
-  type                  String    @default("shipping") @map("type") @db.VarChar(20)
-  isDefault             Boolean   @default(false) @map("is_default")
-  firstName             String    @map("first_name") @db.VarChar(100)
-  lastName              String    @map("last_name") @db.VarChar(100)
-  company               String?   @map("company") @db.VarChar(255)
-  addressLine1          String    @map("address_line1") @db.VarChar(255)
-  addressLine2          String?   @map("address_line2") @db.VarChar(255)
-  city                  String    @map("city") @db.VarChar(100)
-  state                 String    @map("state") @db.VarChar(100)
-  postalCode            String    @map("postal_code") @db.VarChar(20)
-  country               String    @map("country") @db.VarChar(2)
-  phone                 String?   @map("phone") @db.VarChar(20)
-  deliveryInstructions  String?   @map("delivery_instructions") @db.Text
-  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @map("user_id") @db.Uuid
+  type                 String   @default("shipping") @map("type") @db.VarChar(20)
+  isDefault            Boolean  @default(false) @map("is_default")
+  firstName            String   @map("first_name") @db.VarChar(100)
+  lastName             String   @map("last_name") @db.VarChar(100)
+  company              String?  @map("company") @db.VarChar(255)
+  addressLine1         String   @map("address_line1") @db.VarChar(255)
+  addressLine2         String?  @map("address_line2") @db.VarChar(255)
+  city                 String   @map("city") @db.VarChar(100)
+  state                String   @map("state") @db.VarChar(100)
+  postalCode           String   @map("postal_code") @db.VarChar(20)
+  country              String   @map("country") @db.VarChar(2)
+  phone                String?  @map("phone") @db.VarChar(20)
+  deliveryInstructions String?  @map("delivery_instructions")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@index([userId], name: "idx_addresses_user_id")
-  @@index([userId, type], name: "idx_addresses_user_id_type")
+  @@index([userId], map: "idx_addresses_user_id")
+  @@index([userId, type], map: "idx_addresses_user_id_type")
   @@map("addresses")
 }
 
 model Wishlist {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  name      String   @default("My Wishlist") @map("name") @db.VarChar(100)
-  isPublic  Boolean  @default(false) @map("is_public")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  name      String         @default("My Wishlist") @map("name") @db.VarChar(100)
+  isPublic  Boolean        @default(false) @map("is_public")
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  items     WishlistItem[]
 
-  items WishlistItem[]
-
-  @@index([userId], name: "idx_wishlists_user_id")
+  @@index([userId], map: "idx_wishlists_user_id")
   @@map("wishlists")
 }
 
 model WishlistItem {
-  id          String    @id @default(uuid()) @db.Uuid
-  wishlistId  String    @map("wishlist_id") @db.Uuid
-  productId   String    @map("product_id") @db.Uuid
-  variantId   String?   @map("variant_id") @db.Uuid
-  notes       String?   @db.Text
-  priority    Int       @default(0)
-  addedAt     DateTime  @default(now()) @map("added_at") @db.Timestamptz
+  id         String   @id @default(uuid()) @db.Uuid
+  wishlistId String   @map("wishlist_id") @db.Uuid
+  productId  String   @map("product_id") @db.Uuid
+  variantId  String?  @map("variant_id") @db.Uuid
+  notes      String?
+  priority   Int      @default(0)
+  addedAt    DateTime @default(now()) @map("added_at") @db.Timestamptz(6)
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
 
-  wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
-
-  @@unique([wishlistId, productId, variantId], name: "idx_wishlist_items_unique")
-  @@index([wishlistId], name: "idx_wishlist_items_wishlist_id")
-  @@index([productId], name: "idx_wishlist_items_product_id")
+  @@unique([wishlistId, productId, variantId])
+  @@index([wishlistId], map: "idx_wishlist_items_wishlist_id")
+  @@index([productId], map: "idx_wishlist_items_product_id")
   @@map("wishlist_items")
 }
 
 model Review {
-  id                 String    @id @default(uuid()) @db.Uuid
-  userId             String    @map("user_id") @db.Uuid
-  productId          String    @map("product_id") @db.Uuid
-  orderId            String?   @map("order_id") @db.Uuid
-  rating             Int       @db.Integer
-  title              String    @map("title") @db.VarChar(255)
-  content            String    @map("content") @db.Text
-  images             Json      @default("[]") @map("images")
-  isVerifiedPurchase Boolean   @default(false) @map("is_verified_purchase")
-  isApproved         Boolean   @default(false) @map("is_approved")
-  helpfulCount       Int       @default(0) @map("helpful_count")
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                 String          @id @default(uuid()) @db.Uuid
+  userId             String          @map("user_id") @db.Uuid
+  productId          String          @map("product_id") @db.Uuid
+  orderId            String?         @map("order_id") @db.Uuid
+  rating             Int
+  title              String          @map("title") @db.VarChar(255)
+  content            String          @map("content")
+  images             Json            @default("[]") @map("images")
+  isVerifiedPurchase Boolean         @default(false) @map("is_verified_purchase")
+  isApproved         Boolean         @default(false) @map("is_approved")
+  helpfulCount       Int             @default(0) @map("helpful_count")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  helpfulVotes       ReviewHelpful[]
 
-  helpfulVotes ReviewHelpful[]
-
-  @@index([userId], name: "idx_reviews_user_id")
-  @@index([productId], name: "idx_reviews_product_id")
-  @@index([orderId], name: "idx_reviews_order_id")
-  @@index([productId, rating], name: "idx_reviews_product_rating")
+  @@index([userId], map: "idx_reviews_user_id")
+  @@index([productId], map: "idx_reviews_product_id")
+  @@index([orderId], map: "idx_reviews_order_id")
+  @@index([productId, rating], map: "idx_reviews_product_rating")
   @@map("reviews")
 }
 
@@ -111,10 +108,9 @@ model ReviewHelpful {
   id        Int      @id @default(autoincrement())
   reviewId  String   @map("review_id") @db.Uuid
   userId    String   @map("user_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
-  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-
-  @@unique([reviewId, userId], name: "idx_review_helpful_unique")
+  @@unique([reviewId, userId])
   @@map("review_helpful")
 }

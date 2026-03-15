@@ -14,6 +14,10 @@ import {
   JwtPayload,
 } from '../../utils/jwt';
 import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} from '../../utils/email';
+import {
   ConflictError,
   NotFoundError,
   UnauthorizedError,
@@ -53,6 +57,16 @@ export class AuthService {
 
     await userRepository.update(user.id, { verificationToken });
 
+    try {
+      await sendVerificationEmail({
+        email: user.email,
+        username: user.username,
+        token: verificationToken,
+      });
+    } catch (error) {
+      logger.warn('Failed to send verification email, user still registered', { userId: user.id });
+    }
+
     const role = 'user';
     const tokens = await this.generateTokens(user.id, user.email, role, ipAddress, userAgent);
 
@@ -81,6 +95,10 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new UnauthorizedError('Account is disabled');
+    }
+
+    if (!user.isVerified) {
+      throw new UnauthorizedError('Please verify your email before logging in');
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -212,6 +230,12 @@ export class AuthService {
         resetPasswordToken: resetToken,
         resetPasswordExpires: resetExpires,
       });
+
+      try {
+        await sendPasswordResetEmail(user.email, resetToken);
+      } catch (error) {
+        logger.warn('Failed to send password reset email', { userId: user.id });
+      }
 
       logger.info('Password reset requested', { userId: user.id, email: user.email });
     }
