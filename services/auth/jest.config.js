@@ -19,4 +19,10 @@ module.exports = {
     '^@routes/(.*)$': '<rootDir>/src/routes/$1',
     '^@types/(.*)$': '<rootDir>/src/types/$1',
   },
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: 'tsconfig.test.json',
+      isolatedModules: true,
+    }],
+  },
 };
