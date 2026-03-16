@@ -8,4 +8,10 @@ module.exports = {
     '!src/index.ts',
   ],
   coverageDirectory: 'coverage',
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: 'tsconfig.test.json',
+      isolatedModules: true,
+    }],
+  },
 };
