@@ -2,10 +2,11 @@
 
 ## Project Overview
 
-This is a microservices-based e-commerce platform with three services:
-- **auth-service** (`services/auth/`) - Authentication and authorization
-- **api-gateway** (`services/gateway/`) - API Gateway for routing requests
-- **user-service** (`services/user/`) - User management, profiles, addresses, reviews, wishlists
+This is a microservices-based e-commerce platform with four services:
+- **auth-service** (`services/auth/`) - Authentication and authorization (Port 3001)
+- **user-service** (`services/user/`) - User management, profiles, addresses, reviews, wishlists (Port 3002)
+- **product-service** (`services/product/`) - Products, categories, inventory, brands, warehouses (Port 3003)
+- **api-gateway** (`services/gateway/`) - API Gateway for routing requests (Port 3000)
 
 ## Build, Lint, and Test Commands
 
@@ -41,9 +42,10 @@ npm run prisma:push            # Push schema to database
 ### Running Commands in Specific Services
 
 ```bash
-cd services/auth   && npm run <command>
-cd services/gateway && npm run <command>
-cd services/user   && npm run <command>
+cd services/auth      && npm run <command>
+cd services/user      && npm run <command>
+cd services/product   && npm run <command>
+cd services/gateway   && npm run <command>
 ```
 
 ## Code Style Guidelines
@@ -53,94 +55,69 @@ cd services/user   && npm run <command>
 - Use **TypeScript** with strict mode enabled
 - Follow the **Controller-Service-Repository** architectural pattern
 - Use **barrel exports** (index.ts files) for clean module imports
-- Keep functions small and focused (single responsibility)
 
 ### Naming Conventions
 
 | Element | Convention | Example |
 |---------|------------|---------|
-| Classes | PascalCase | `AuthController`, `UserService` |
-| Functions/variables | camelCase | `getUserById`, `isActive` |
+| Classes | PascalCase | `AuthController`, `ProductsService` |
+| Functions/variables | camelCase | `getProductById`, `isActive` |
 | Constants | SCREAMING_SNAKE_CASE | `MAX_RETRY_COUNT` |
-| Interfaces/Types | PascalCase | `UserResponse`, `RegisterInput` |
-| Files | kebab-case | `auth.controller.ts`, `user.service.ts` |
-| Database models | PascalCase | `User`, `Session`, `LoginAttempt` |
+| Interfaces/Types | PascalCase | `ProductResponse`, `CreateProductInput` |
+| Files | kebab-case | `products.controller.ts`, `products.service.ts` |
+| Database models | PascalCase | `Product`, `Category`, `Inventory` |
 
 ### Import Order
 
-1. Node built-ins (fs, path, etc.)
+1. Node built-ins
 2. External libraries (express, zod, prisma)
-3. Internal modules (relative paths for same module, absolute for shared)
+3. Internal modules (relative paths)
 4. Type imports
 
 ```typescript
-// Good
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
-import { config } from '../../config';
-import { userRepository, sessionRepository } from '../../repositories';
-import { generateAccessToken } from '../../utils/jwt';
-import { UnauthorizedError } from '../../utils/errors';
-import type { RegisterInput, AuthResponse } from './auth.types';
+import { productRepository } from '../../repositories';
+import { NotFoundError } from '../../utils/errors';
+import type { CreateProductInput } from './products.validator';
 ```
 
 ### Response Format
 
-All API responses should follow this structure:
-
 ```typescript
-// Success response
-res.status(200).json({
-  success: true,
-  data: { /* response data */ },
-});
+// Success
+res.status(200).json({ success: true, data: { /* data */ } });
 
-// Created response
-res.status(201).json({
-  success: true,
-  data: { /* response data */ },
-});
+// Created
+res.status(201).json({ success: true, data: { /* data */ } });
 
-// Error response
-res.status(400).json({
-  success: false,
-  error: {
-    code: 'VALIDATION_ERROR',
-    message: 'Error message',
-  },
-});
+// Error
+res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Error' } });
 ```
 
 ### Error Handling
 
 Use custom error classes from `src/utils/errors.ts`:
+- `ValidationError` (400) - Input validation errors
+- `UnauthorizedError` (401) - Authentication failures
+- `ForbiddenError` (403) - Permission denied
+- `NotFoundError` (404) - Resource not found
+- `ConflictError` (409) - Duplicate/invalid state
+- `InternalServerError` (500) - Server errors
 
 ```typescript
-// In controllers - pass errors to middleware
+// Controllers - pass errors to middleware
 try {
-  const result = await authService.register(req.body);
-  res.status(201).json({ success: true, data: result });
+  const product = await productsService.getProductById(id);
+  res.status(200).json({ success: true, data: product });
 } catch (error) {
   next(error);
 }
 
-// Throwing errors in services
-throw new UnauthorizedError('Invalid credentials');
-throw new NotFoundError('User');
-throw new ConflictError('Email already registered');
+// Services - throw errors
+throw new NotFoundError('Product');
+throw new ConflictError('SKU already exists');
 ```
-
-Available error classes:
-- `AppError` (base class)
-- `ValidationError` (400)
-- `UnauthorizedError` (401)
-- `ForbiddenError` (403)
-- `NotFoundError` (404)
-- `ConflictError` (409)
-- `InternalServerError` (500)
-- `TokenExpiredError` (401)
-- `InvalidTokenError` (401)
 
 ### Validation
 
@@ -149,149 +126,159 @@ Use **Zod** for request validation in validators:
 ```typescript
 import { z } from 'zod';
 
-export const registerSchema = z.object({
+export const createProductSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid email format'),
-    password: z.string().min(8).regex(/[A-Z]/),
-    username: z.string().min(3).max(50),
-    firstName: z.string().min(1).max(100),
-    lastName: z.string().min(1).max(100),
-    phone: z.string().optional(),
+    sku: z.string().min(1).max(50),
+    name: z.string().min(1).max(255),
+    slug: z.string().min(1).max(255),
+    categoryId: z.string().uuid(),
+    basePrice: z.number().positive(),
   }),
 });
 
-export type RegisterInput = z.infer<typeof registerSchema>['body'];
+export type CreateProductInput = z.infer<typeof createProductSchema>['body'];
 ```
 
-Apply validation in routes:
-
+Apply in routes:
 ```typescript
 import { validate } from '../../utils/validate';
-
-router.post('/register', validate(registerSchema), authController.register);
+router.post('/', authenticate, requireAdmin, validate(createProductSchema), productsController.createProduct);
 ```
 
 ### Project Structure
 
 ```
 src/
-├── config/           # Configuration (environment variables)
-├── controllers/      # (Not used - use modules/)
-├── middleware/       # Express middleware (auth, rate-limit, error)
-├── modules/          # Feature modules (auth/, users/, etc.)
+├── config/           # Environment configuration
+├── middleware/       # Express middleware (auth, error, rate-limit)
+├── modules/          # Feature modules
 │   └── <module>/
-│       ├── index.ts          # Barrel export
-│       ├── <module>.route.ts # Express router
+│       ├── index.ts           # Barrel export
+│       ├── <module>.route.ts  # Express router
 │       ├── <module>.controller.ts
 │       ├── <module>.service.ts
 │       ├── <module>.validator.ts
-│       └── <module>.types.ts  # TypeScript interfaces
+│       └── <module>.types.ts
 ├── repositories/     # Database access (Prisma)
 ├── routes/          # Main router
-├── utils/           # Utilities (errors, logger, jwt, validate)
+├── utils/           # Utilities (errors, logger, validate)
 ├── app.ts           # Express app factory
 └── index.ts         # Entry point
+```
+
+### Service Pattern
+
+```typescript
+export class ProductsService {
+  async getProductById(id: string): Promise<ProductResponse> {
+    const product = await productRepository.findById(id);
+    if (!product) throw new NotFoundError('Product');
+    return this.formatProductResponse(product);
+  }
+}
+
+export const productsService = new ProductsService();
 ```
 
 ### Controller Pattern
 
 ```typescript
-export class AuthController {
-  async register(req: Request, res: Response, next: NextFunction) {
+export class ProductsController {
+  async getProductById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const result = await authService.register(req.body);
-      res.status(201).json({ success: true, data: result });
+      const product = await productsService.getProductById(req.params.id);
+      res.status(200).json({ success: true, data: product });
     } catch (error) {
       next(error);
     }
   }
 }
 
-export const authController = new AuthController();
+export const productsController = new ProductsController();
 ```
-
-### Service Pattern
-
-```typescript
-export class AuthService {
-  async register(input: RegisterInput): Promise<AuthResponse> {
-    // Validate business logic
-    if (await userRepository.existsByEmail(input.email)) {
-      throw new ConflictError('Email already registered');
-    }
-    // Process and return
-    return { user, tokens };
-  }
-}
-
-export const authService = new AuthService();
-```
-
-### TypeScript Configuration
-
-The project uses strict TypeScript settings:
-- `strict: true`
-- `noImplicitAny: true`
-- `strictNullChecks: true`
-- `noUnusedLocals: true`
-- `noUnusedParameters: true`
-
-Always define proper types - avoid `any`.
-
-### Logging
-
-Use the centralized logger from `src/utils/logger`:
-
-```typescript
-import { logger } from '../../utils/logger';
-
-logger.info('User registered', { userId: user.id, email: user.email });
-logger.error('Failed to process', { error: err.message });
-```
-
-### Database (Prisma)
-
-- Use Prisma Client for database operations
-- Repository pattern for data access
-- Always use parameterized queries (Prisma handles this)
 
 ### Testing Guidelines
 
-Follow Jest conventions:
+Follow Jest conventions with mocks:
 
 ```typescript
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
-describe('AuthService', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+jest.mock('../src/repositories/product.repository', () => ({
+  productRepository: {
+    findById: jest.fn(),
+    create: jest.fn(),
+  },
+}));
 
-  describe('register', () => {
-    it('should register a new user', async () => {
-      // Test implementation
+describe('ProductsService', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  describe('getProductById', () => {
+    it('should return product by id', async () => {
+      const { productsService } = await import('../src/modules/products/products.service');
+      const { productRepository } = await import('../src/repositories/product.repository');
+      (productRepository.findById as jest.Mock).mockResolvedValue({ id: '1', name: 'Test' });
+      
+      const result = await productsService.getProductById('1');
+      expect(result.id).toBe('1');
     });
   });
 });
 ```
 
-### Database Environment
-
-Each service requires a `.env` file with:
-```
-DATABASE_URL=postgresql://...
-REDIS_URL=redis://...
-JWT_SECRET=...
-JWT_REFRESH_SECRET=...
-PORT=3001
-NODE_ENV=development
-```
-
 ### Security Best Practices
 
 - Never log sensitive data (passwords, tokens)
-- Use parameterized queries (Prisma default)
 - Validate all user input with Zod
-- Use rate limiting on auth endpoints
+- Use parameterized queries (Prisma handles this)
 - Hash passwords with bcrypt (12 rounds)
 - Implement proper CORS configuration
+
+### Product-Service API Endpoints
+
+```
+Products:
+GET    /api/v1/products              - List products (public)
+GET    /api/v1/products/featured     - Featured products (public)
+GET    /api/v1/products/slug/:slug  - Get by slug (public)
+GET    /api/v1/products/:id         - Get by ID (public)
+POST   /api/v1/products             - Create (admin)
+PUT    /api/v1/products/:id         - Update (admin)
+DELETE /api/v1/products/:id         - Delete (admin)
+
+Categories:
+GET    /api/v1/categories            - List categories (public)
+GET    /api/v1/categories/tree      - Category tree (public)
+GET    /api/v1/categories/slug/:slug - Get by slug (public)
+GET    /api/v1/categories/:id       - Get by ID (public)
+POST   /api/v1/categories           - Create (admin)
+PUT    /api/v1/categories/:id       - Update (admin)
+DELETE /api/v1/categories/:id       - Delete (admin)
+
+Brands:
+GET    /api/v1/brands               - List brands (public)
+GET    /api/v1/brands/slug/:slug   - Get by slug (public)
+GET    /api/v1/brands/:id          - Get by ID (public)
+POST   /api/v1/brands              - Create (admin)
+PUT    /api/v1/brands/:id          - Update (admin)
+DELETE /api/v1/brands/:id          - Delete (admin)
+
+Inventory:
+GET    /api/v1/inventory             - List inventory (admin)
+GET    /api/v1/inventory/product/:productId - By product (public)
+GET    /api/v1/inventory/variant/:variantId - By variant (public)
+GET    /api/v1/inventory/:id       - Get by ID (public)
+POST   /api/v1/inventory            - Create (admin)
+POST   /api/v1/inventory/:id/adjust - Adjust quantity (admin)
+POST   /api/v1/inventory/:id/reserve - Reserve (admin)
+POST   /api/v1/inventory/:id/release - Release (admin)
+DELETE /api/v1/inventory/:id        - Delete (admin)
+
+Warehouses:
+GET    /api/v1/inventory/warehouses/all - List warehouses (admin)
+GET    /api/v1/inventory/warehouses/:id - Get by ID (admin)
+POST   /api/v1/inventory/warehouses     - Create (admin)
+PUT    /api/v1/inventory/warehouses/:id - Update (admin)
+DELETE /api/v1/inventory/warehouses/:id - Delete (admin)
+```
