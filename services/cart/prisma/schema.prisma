@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cart {
+  id              String      @id @default(uuid())
+  sessionId       String?     @unique
+  userId          String?
+  currency        String      @default("USD")
+  subtotal        Decimal     @default(0) @db.Decimal(12, 2)
+  taxTotal        Decimal     @default(0) @db.Decimal(12, 2)
+  shippingTotal   Decimal     @default(0) @db.Decimal(12, 2)
+  discountTotal   Decimal     @default(0) @db.Decimal(12, 2)
+  total           Decimal     @default(0) @db.Decimal(12, 2)
+  couponCode      String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           CartItem[]
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+model CartItem {
+  id          String   @id @default(uuid())
+  cartId      String
+  productId   String
+  variantId   String?
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  totalPrice  Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cart        Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model SavedCart {
+  id              String   @id @default(uuid())
+  userId          String
+  name            String
+  items           Json     @default("[]")
+  originalCartId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}

@@ -20,6 +20,10 @@ echo ">>> Running product-service tests..."
 cd "$PROJECT_DIR/services/product" && npm test
 
 echo ""
+echo ">>> Running cart-service tests..."
+cd "$PROJECT_DIR/services/cart" && npm test
+
+echo ""
 echo ">>> Running gateway-service tests..."
 cd "$PROJECT_DIR/services/gateway" && npm test
 
