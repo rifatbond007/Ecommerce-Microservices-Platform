@@ -9,12 +9,13 @@ export const errorHandler = (
   next: NextFunction
 ) => {
   if (err instanceof AppError) {
+    const validationError = err as any;
     return res.status(err.statusCode).json({
       success: false,
       error: {
         code: err.errorCode,
         message: err.message,
-        ...(err.details && { details: err.details }),
+        ...(validationError.details && { details: validationError.details }),
       },
     });
   }
