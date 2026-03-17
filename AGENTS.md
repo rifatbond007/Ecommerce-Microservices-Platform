@@ -1,4 +1,4 @@
-# AGENTS.md - Development Guidelines
+<!-- # AGENTS.md - Development Guidelines
 
 ## Project Overview
 
@@ -281,4 +281,94 @@ GET    /api/v1/inventory/warehouses/:id - Get by ID (admin)
 POST   /api/v1/inventory/warehouses     - Create (admin)
 PUT    /api/v1/inventory/warehouses/:id - Update (admin)
 DELETE /api/v1/inventory/warehouses/:id - Delete (admin)
+``` -->
+
+
+
+# AGENTS.md — OpenCode Codebase Rules
+
+## Auto Commit & Push Workflow (Free — No External API)
+
+### Trigger Phrases
+যখন user এগুলো বলবে, তখন নিচের steps follow করো:
+
+- "commit koro"
+- "commit kore dao"
+- "push koro"
+- "push kore dao"
+- "save koro"
+- "/commit"
+- "/push"
+- "/done"
+- "done, commit koro"
+
+---
+
+### Step-by-Step Process
+
+**Step 1 — চেক করো কী পরিবর্তন হয়েছে**
+```bash
+git status
+git diff --cached --stat
+git diff --stat
+```
+
+**Step 2 — সব changes stage করো**
+```bash
+git add -A
+```
+
+**Step 3 — Diff analyze করো এবং commit message বানাও**
+
+Staged diff দেখে নিজে একটা conventional commit message তৈরি করো:
+
+Format:
+```
+type(scope): short description
+
+[optional body — max 3 lines, only if complex]
+```
+
+Types: `feat` | `fix` | `refactor` | `chore` | `docs` | `test` | `style` | `perf`
+
+Examples:
+```
+feat(auth): add seller registration with admin approval workflow
+fix(user): resolve UUID validation on userId params
+refactor(product): allow admins and approved sellers to manage products
+chore(env): replace hardcoded admin email with placeholder
+```
+
+**Step 4 — Commit করো**
+```bash
+git commit -m "তোমার generated message এখানে"
+```
+
+**Step 5 — Current branch চেক করো তারপর push করো**
+```bash
+git rev-parse --abbrev-ref HEAD   # branch name জানো
+git push origin <branch-name>
+```
+
+upstream না থাকলে:
+```bash
+git push --set-upstream origin <branch-name>
+```
+
+---
+
+### Rules
+- `main` বা `master`-এ directly push করবে না — সবসময় current branch চেক করো
+- কোনো changes না থাকলে user-কে জানাও, commit করো না
+- Commit message সবসময় ইংরেজিতে লিখবে
+- Push সফল হলে user-কে confirm করো কোন branch-এ গেছে
+
+---
+
+### /review এর পরে
+`/review` command শেষ হলে সবসময় এটা যোগ করো:
+
+```
+---
+✅ Review শেষ। Commit করতে চাইলে বলো: "commit koro"
 ```
