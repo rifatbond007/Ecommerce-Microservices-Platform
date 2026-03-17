@@ -11,6 +11,7 @@ export interface UserResponse {
   lastName: string;
   phone: string | null;
   avatarUrl: string | null;
+  sellerStatus: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
   isActive: boolean;
   isVerified: boolean;
   roles: string[];

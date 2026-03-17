@@ -52,4 +52,8 @@ export const config = {
   app: {
     url: process.env.APP_URL || 'http://localhost:3000',
   },
+
+  admin: {
+    email: process.env.ADMIN_EMAIL || '',
+  },
 };

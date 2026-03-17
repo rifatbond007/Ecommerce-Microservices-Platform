@@ -15,6 +15,7 @@ export interface UpdateUserData {
   lastName?: string;
   phone?: string;
   avatarUrl?: string;
+  sellerStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
   isActive?: boolean;
   isVerified?: boolean;
   verificationToken?: string | null;
@@ -126,6 +127,29 @@ export class UserRepository {
         lockedUntil: null,
         lastLoginAt: new Date(),
       },
+    });
+  }
+
+  async findBySellerStatus(status: 'PENDING' | 'APPROVED' | 'REJECTED') {
+    return prisma.user.findMany({
+      where: { sellerStatus: status },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        sellerStatus: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async updateSellerStatus(id: string, status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED') {
+    return prisma.user.update({
+      where: { id },
+      data: { sellerStatus: status },
     });
   }
 

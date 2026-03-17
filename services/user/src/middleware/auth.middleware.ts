@@ -7,6 +7,7 @@ export interface AuthUser {
   userId: string;
   email: string;
   role: string;
+  sellerStatus: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -37,6 +38,7 @@ export const authenticate = async (
         userId: response.data.data.id,
         email: response.data.data.email,
         role: response.data.data.roles?.[0] || 'user',
+        sellerStatus: response.data.data.sellerStatus || 'NONE',
       };
     next();
   } catch (error) {
@@ -69,6 +71,7 @@ export const optionalAuth = async (
       userId: response.data.data.id,
       email: response.data.data.email,
       role: response.data.data.roles?.[0] || 'user',
+      sellerStatus: response.data.data.sellerStatus || 'NONE',
     };
     }
   } catch {
@@ -84,6 +87,31 @@ export const requireAdmin = (
 ) => {
   if (!req.user || req.user.role !== 'admin') {
     return next(new UnauthorizedError('Admin access required'));
+  }
+  next();
+};
+
+export const requireSeller = (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+) => {
+  if (!req.user || req.user.sellerStatus !== 'APPROVED') {
+    return next(new UnauthorizedError('Seller access required'));
+  }
+  next();
+};
+
+export const requireAdminOrSeller = (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+) => {
+  if (!req.user) {
+    return next(new UnauthorizedError('Authentication required'));
+  }
+  if (req.user.role !== 'admin' && req.user.sellerStatus !== 'APPROVED') {
+    return next(new UnauthorizedError('Admin or Seller access required'));
   }
   next();
 };

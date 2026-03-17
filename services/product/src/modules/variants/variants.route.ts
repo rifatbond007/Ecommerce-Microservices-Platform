@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { variantsController } from './variants.controller';
-import { authenticate, requireAdmin, optionalAuth } from '../../middleware';
+import { authenticate, requireAdminOrSeller, optionalAuth } from '../../middleware';
 import { validate } from '../../utils/validate';
 import { createProductVariantSchema, updateProductVariantSchema } from './variants.validator';
 
@@ -10,10 +10,10 @@ router.get('/product/:productId', optionalAuth, variantsController.getVariantsBy
 
 router.get('/:id', optionalAuth, variantsController.getVariantById);
 
-router.post('/', authenticate, requireAdmin, validate(createProductVariantSchema), variantsController.createVariant);
+router.post('/', authenticate, requireAdminOrSeller, validate(createProductVariantSchema), variantsController.createVariant);
 
-router.put('/:id', authenticate, requireAdmin, validate(updateProductVariantSchema), variantsController.updateVariant);
+router.put('/:id', authenticate, requireAdminOrSeller, validate(updateProductVariantSchema), variantsController.updateVariant);
 
-router.delete('/:id', authenticate, requireAdmin, variantsController.deleteVariant);
+router.delete('/:id', authenticate, requireAdminOrSeller, variantsController.deleteVariant);
 
 export default router;

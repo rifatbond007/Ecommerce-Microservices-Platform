@@ -46,3 +46,14 @@ export const optionalAuth = (
   }
   next();
 };
+
+export const requireAdmin = (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return next(new UnauthorizedError('Admin access required'));
+  }
+  next();
+};
