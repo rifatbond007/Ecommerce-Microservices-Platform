@@ -46,6 +46,9 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, config.bcrypt.saltRounds);
     const verificationToken = uuidv4();
 
+    const isAdminEmail = email.toLowerCase() === config.admin.email.toLowerCase() && config.admin.email !== '';
+    const role = isAdminEmail ? 'admin' : 'user';
+
     const user = await userRepository.create({
       email,
       passwordHash,
@@ -67,10 +70,9 @@ export class AuthService {
       logger.warn('Failed to send verification email, user still registered', { userId: user.id });
     }
 
-    const role = 'user';
     const tokens = await this.generateTokens(user.id, user.email, role, ipAddress, userAgent);
 
-    logger.info('User registered', { userId: user.id, email: user.email });
+    logger.info('User registered', { userId: user.id, email: user.email, role });
 
     return {
       user: this.formatUserResponse(user, [role]),
@@ -297,6 +299,51 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  async getSellerStatus(userId: string): Promise<string> {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new NotFoundError('User');
+    return user.sellerStatus || 'NONE';
+  }
+
+  async requestSeller(userId: string): Promise<void> {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new NotFoundError('User');
+    
+    if (user.sellerStatus === 'PENDING') {
+      throw new ConflictError('Seller request already pending');
+    }
+    if (user.sellerStatus === 'APPROVED') {
+      throw new ConflictError('You are already a seller');
+    }
+
+    await userRepository.updateSellerStatus(userId, 'PENDING');
+    logger.info('Seller request submitted', { userId });
+  }
+
+  async getSellerRequests() {
+    return userRepository.findBySellerStatus('PENDING');
+  }
+
+  async approveSeller(userId: string): Promise<void> {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new NotFoundError('User');
+
+    if (user.sellerStatus !== 'PENDING') {
+      throw new ConflictError('No pending seller request found');
+    }
+
+    await userRepository.updateSellerStatus(userId, 'APPROVED');
+    logger.info('Seller approved', { userId });
+  }
+
+  async rejectSeller(userId: string): Promise<void> {
+    const user = await userRepository.findById(userId);
+    if (!user) throw new NotFoundError('User');
+
+    await userRepository.updateSellerStatus(userId, 'REJECTED');
+    logger.info('Seller request rejected', { userId });
+  }
+
   private formatUserResponse(user: any, roles: string[]): UserResponse {
     return {
       id: user.id,
@@ -306,6 +353,7 @@ export class AuthService {
       lastName: user.lastName,
       phone: user.phone,
       avatarUrl: user.avatarUrl,
+      sellerStatus: user.sellerStatus || 'NONE',
       isActive: user.isActive,
       isVerified: user.isVerified,
       roles,

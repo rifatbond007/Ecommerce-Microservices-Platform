@@ -236,6 +236,101 @@
           }
         }
       ]
+    },
+    {
+      "name": "Seller",
+      "item": [
+        {
+          "name": "Get Seller Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/seller/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["seller", "status"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Request Seller",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/seller/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["seller", "request"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Seller Requests",
+      "item": [
+        {
+          "name": "Get Seller Requests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/seller-requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "seller-requests"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Approve Seller",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/admin/seller-requests/:userId/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "seller-requests", ":userId", "approve"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Reject Seller",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/admin/seller-requests/:userId/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "seller-requests", ":userId", "reject"]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

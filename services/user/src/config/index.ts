@@ -31,4 +31,8 @@ export const config = {
   logging: {
     level: process.env.LOG_LEVEL || 'info',
   },
+
+  admin: {
+    email: process.env.ADMIN_EMAIL || '',
+  },
 };

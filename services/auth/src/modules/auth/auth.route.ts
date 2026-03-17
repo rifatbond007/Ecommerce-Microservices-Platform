@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authController } from './auth.controller';
-import { authenticate } from './auth.middleware';
+import { authenticate, requireAdmin } from './auth.middleware';
 import { loginRateLimiter, authRateLimiter } from '../../middleware/rate-limit.middleware';
 import { validate } from '../../utils/validate';
 import {
@@ -33,5 +33,15 @@ router.post('/forgot-password', authRateLimiter, validate(forgotPasswordSchema),
 router.post('/reset-password', authRateLimiter, validate(resetPasswordSchema), authController.resetPassword);
 
 router.get('/me', authenticate, authController.getMe);
+
+router.get('/seller/status', authenticate, authController.getSellerStatus);
+
+router.post('/seller/request', authenticate, authController.requestSeller);
+
+router.get('/admin/seller-requests', authenticate, requireAdmin, authController.getSellerRequests);
+
+router.post('/admin/seller-requests/:userId/approve', authenticate, requireAdmin, authController.approveSeller);
+
+router.post('/admin/seller-requests/:userId/reject', authenticate, requireAdmin, authController.rejectSeller);
 
 export default router;
