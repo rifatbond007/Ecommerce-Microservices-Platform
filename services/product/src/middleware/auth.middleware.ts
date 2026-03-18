@@ -37,7 +37,7 @@ export const authenticate = async (
     req.user = {
       userId: response.data.data.id,
       email: response.data.data.email,
-      role: response.data.data.roles?.[0] || 'user',
+      role: response.data.data.role || response.data.data.roles?.[0] || 'user',
       sellerStatus: response.data.data.sellerStatus || 'NONE',
     };
     next();
@@ -70,7 +70,7 @@ export const optionalAuth = async (
       req.user = {
         userId: response.data.data.id,
         email: response.data.data.email,
-        role: response.data.data.roles?.[0] || 'user',
+        role: response.data.data.role || response.data.data.roles?.[0] || 'user',
         sellerStatus: response.data.data.sellerStatus || 'NONE',
       };
     }

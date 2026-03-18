@@ -95,6 +95,8 @@ This document outlines the database schemas for each microservice in the e-comme
 | last_name | VARCHAR(100) | NOT NULL | Last name |
 | phone | VARCHAR(20) | NULLABLE | Phone number |
 | avatar_url | VARCHAR(500) | NULLABLE | Profile picture URL |
+| role | VARCHAR(20) | NOT NULL DEFAULT 'user' | User role (user/admin) |
+| seller_status | VARCHAR(20) | NOT NULL DEFAULT 'NONE' | Seller status (NONE/PENDING/APPROVED/REJECTED) |
 | is_active | BOOLEAN | NOT NULL DEFAULT true | Account active status |
 | is_verified | BOOLEAN | NOT NULL DEFAULT false | Email verified status |
 | verification_token | VARCHAR(255) | NULLABLE | Email verification token |
@@ -110,6 +112,7 @@ This document outlines the database schemas for each microservice in the e-comme
 - `idx_users_email` ON (email)
 - `idx_users_username` ON (username)
 - `idx_users_verification_token` ON (verification_token)
+- `idx_users_seller_status` ON (seller_status)
 
 #### roles
 
