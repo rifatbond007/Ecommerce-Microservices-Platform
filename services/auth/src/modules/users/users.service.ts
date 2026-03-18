@@ -53,6 +53,8 @@ export class UsersService {
       lastName: user.lastName,
       phone: user.phone,
       avatarUrl: user.avatarUrl,
+      role: user.role || 'user',
+      sellerStatus: user.sellerStatus || 'NONE',
       isActive: user.isActive,
       isVerified: user.isVerified,
       roles,

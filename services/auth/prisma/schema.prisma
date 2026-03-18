@@ -16,6 +16,7 @@ model User {
   lastName             String      @map("last_name") @db.VarChar(100)
   phone                String?     @map("phone") @db.VarChar(20)
   avatarUrl            String?     @map("avatar_url") @db.VarChar(500)
+  role                 String      @default("user") @map("role") @db.VarChar(20)
   sellerStatus         SellerStatus @default(NONE) @map("seller_status")
   isActive             Boolean     @default(true) @map("is_active")
   isVerified           Boolean     @default(false) @map("is_verified")
@@ -33,6 +34,7 @@ model User {
   @@index([email], map: "idx_users_email")
   @@index([username], map: "idx_users_username")
   @@index([verificationToken], map: "idx_users_verification_token")
+  @@index([sellerStatus], map: "idx_users_seller_status")
   @@map("users")
 }
 

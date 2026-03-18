@@ -8,6 +8,7 @@ export interface CreateUserData {
   firstName: string;
   lastName: string;
   phone?: string;
+  role?: string;
 }
 
 export interface UpdateUserData {
@@ -85,6 +86,7 @@ export class UserRepository {
         firstName: data.firstName,
         lastName: data.lastName,
         phone: data.phone,
+        role: data.role || 'user',
       },
     });
   }

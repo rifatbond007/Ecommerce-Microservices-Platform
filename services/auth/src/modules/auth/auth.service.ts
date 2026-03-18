@@ -56,6 +56,7 @@ export class AuthService {
       firstName,
       lastName,
       phone,
+      role,
     });
 
     await userRepository.update(user.id, { verificationToken });
@@ -353,6 +354,7 @@ export class AuthService {
       lastName: user.lastName,
       phone: user.phone,
       avatarUrl: user.avatarUrl,
+      role: user.role || 'user',
       sellerStatus: user.sellerStatus || 'NONE',
       isActive: user.isActive,
       isVerified: user.isVerified,
