@@ -237,7 +237,7 @@ services/
 ├── product/        # Product Service (port 3003)
 ├── cart/           # Cart Service (port 3004)
 ├── gateway/        # API Gateway (port 3000)
-├── order/          # Order Service (NOT IMPLEMENTED - port 3005)
+├── order/          # Order Service (port 3005)
 ├── payment/        # Payment Service (NOT IMPLEMENTED - port 3006)
 ├── notification/   # Notification Service (NOT IMPLEMENTED - port 3007)
 ├── search/         # Search Service (NOT IMPLEMENTED - port 3008)
@@ -290,12 +290,13 @@ The gateway proxies requests to services:
 ## Known Issues
 
 ### 1. Missing Services
-Order, Payment, Notification, Search, and Admin services are documented but not implemented.
+Payment, Notification, Search, and Admin services are documented but not implemented.
 
-> **Note**: The cart service and user service issues have been FIXED:
+> **Note**: The cart service, user service, and order service issues have been FIXED:
 > - Cart routes now have `authenticate` middleware
 > - Cart/User/Product services support `x-user-id` header from gateway
 > - User service routes updated to `/users/me/*` to match gateway expectations
+> - Order service is now implemented
 
 ---
 
