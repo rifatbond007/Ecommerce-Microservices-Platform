@@ -15,10 +15,10 @@ export {
 
 const router = Router();
 
-router.use('/profiles', profilesRoutes);
-router.use('/addresses', addressesRoutes);
-router.use('/wishlists', wishlistsRoutes);
-router.use('/reviews', reviewsRoutes);
+router.use('/users/me', profilesRoutes);
+router.use('/users/me/addresses', addressesRoutes);
+router.use('/users/me/wishlists', wishlistsRoutes);
+router.use('/users/me/reviews', reviewsRoutes);
 router.use('/sellers', sellersRoutes);
 
 export default router;

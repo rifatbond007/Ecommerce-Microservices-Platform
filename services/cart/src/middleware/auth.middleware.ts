@@ -13,18 +13,25 @@ export interface AuthRequest extends Request {
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const userIdHeader = req.headers['x-user-id'] as string;
+    const userEmailHeader = req.headers['x-user-email'] as string;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, config.jwt.secret) as { userId: string; email: string };
+      
+      req.user = {
+        id: decoded.userId,
+        email: decoded.email,
+      };
+    } else if (userIdHeader) {
+      req.user = {
+        id: userIdHeader,
+        email: userEmailHeader || '',
+      };
+    } else {
       throw new UnauthorizedError('No token provided');
     }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, config.jwt.secret) as { userId: string; email: string };
-    
-    req.user = {
-      id: decoded.userId,
-      email: decoded.email,
-    };
     
     next();
   } catch (error) {

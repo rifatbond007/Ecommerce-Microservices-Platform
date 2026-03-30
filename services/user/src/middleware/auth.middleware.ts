@@ -21,18 +21,18 @@ export const authenticate = async (
 ) => {
   try {
     const authHeader = req.headers.authorization;
+    const userIdHeader = req.headers['x-user-id'] as string;
+    const userEmailHeader = req.headers['x-user-email'] as string;
+    const userRoleHeader = req.headers['x-user-role'] as string;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('No token provided');
-    }
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
 
-    const token = authHeader.substring(7);
-
-    const response = await axios.get(`${config.authService.url}/api/v1/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+      const response = await axios.get(`${config.authService.url}/api/v1/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       req.user = {
         userId: response.data.data.id,
@@ -40,6 +40,16 @@ export const authenticate = async (
         role: response.data.data.role || response.data.data.roles?.[0] || 'user',
         sellerStatus: response.data.data.sellerStatus || 'NONE',
       };
+    } else if (userIdHeader) {
+      req.user = {
+        userId: userIdHeader,
+        email: userEmailHeader || '',
+        role: userRoleHeader || 'user',
+        sellerStatus: 'NONE',
+      };
+    } else {
+      throw new UnauthorizedError('No token provided');
+    }
     next();
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -57,6 +67,9 @@ export const optionalAuth = async (
 ) => {
   try {
     const authHeader = req.headers.authorization;
+    const userIdHeader = req.headers['x-user-id'] as string;
+    const userEmailHeader = req.headers['x-user-email'] as string;
+    const userRoleHeader = req.headers['x-user-role'] as string;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
@@ -73,6 +86,13 @@ export const optionalAuth = async (
       role: response.data.data.role || response.data.data.roles?.[0] || 'user',
       sellerStatus: response.data.data.sellerStatus || 'NONE',
     };
+    } else if (userIdHeader) {
+      req.user = {
+        userId: userIdHeader,
+        email: userEmailHeader || '',
+        role: userRoleHeader || 'user',
+        sellerStatus: 'NONE',
+      };
     }
   } catch {
     // Ignore errors for optional auth
