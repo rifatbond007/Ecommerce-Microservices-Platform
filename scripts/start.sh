@@ -9,8 +9,10 @@ cd services/cart && npm run dev &
 cd services/order && npm run dev &
 cd services/admin && npm run dev &
 cd services/gateway && npm run dev &
+cd Frontend && npm run dev &
 
 echo "All services started!"
+echo "Frontend: http://localhost:5173"
 echo "Gateway: http://localhost:3000"
 echo "Auth: http://localhost:3001"
 echo "User: http://localhost:3002"

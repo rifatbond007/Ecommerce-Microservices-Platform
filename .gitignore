@@ -9,6 +9,7 @@ node_modules/
 dist/
 build/
 AGENTS.md
+client.md
 
 # Logs
 *.log
