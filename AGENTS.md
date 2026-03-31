@@ -1,230 +1,59 @@
-# AGENTS.md — OpenCode Codebase Rules
+# AGENTS.md — Codebase Rules
 
 ## Build / Lint / Test Commands
 
 ### Per-Service Commands (run from service directory)
-
 ```bash
-# Development
-npm run dev                    # Start with hot-reload (ts-node-dev)
-
-# Build
-npm run build                 # Compile TypeScript to dist/
-npm run start                 # Run compiled JS from dist/
-
-# Testing
-npm run test                  # Run Jest tests
-npm run test:watch            # Run tests in watch mode
-npm run test:coverage         # Run tests with coverage
-npm run test -- --testNamePattern="test name"  # Run single test
-
-# Linting
-npm run lint                  # Run ESLint
-npm run lint:fix              # Fix ESLint issues
-
-# Database
-npm run prisma:generate       # Generate Prisma client
-npm run prisma:migrate        # Run migrations
-npm run prisma:push           # Push schema to DB
-```
-
-### Root Commands
-
-```bash
-# Install all services
-cd services/<service> && npm install
-
-# Run infrastructure
-cd infra && docker-compose up -d
+npm run dev              # Start with hot-reload
+npm run build            # Compile TypeScript to dist/
+npm run start            # Run compiled JS
+npm run test            # Run Jest tests
+npm run test:watch      # Watch mode
+npm run test:coverage   # With coverage
+npm run test -- --testNamePattern="name"  # Single test
+npm run lint            # ESLint
+npm run lint:fix        # Fix ESLint issues
+npm run prisma:generate
+npm run prisma:migrate
 ```
 
 ---
 
 ## Code Style Guidelines
 
-### TypeScript Configuration
-
-All services use `tsconfig.json` with strict mode:
-
+### TypeScript (strict mode)
 ```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true
-  }
-}
+{ "strict": true, "noImplicitAny": true, "strictNullChecks": true }
 ```
 
-### Path Aliases
+### Import Order
+1. Node.js built-in (express)
+2. External (prisma, zod)
+3. Internal (@ aliases, relative)
 
-Use path aliases defined in tsconfig.json:
-
-```typescript
-// Instead of relative imports
-import { authService } from '@services/auth';
-import { config } from '@config';
-import { logger } from '@utils/logger';
-```
-
-### Import Organization
-
-Order imports as follows:
-
-1. Node.js built-in (express, etc.)
-2. External libraries (prisma, zod, etc.)
-3. Internal modules (relative paths, @ aliases)
-
-```typescript
-import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { z } from 'zod';
-import { authService } from '@modules/auth';
-import { config } from '@/config';
-```
-
-### Naming Conventions
-
+### Naming
 | Type | Convention | Example |
 |------|------------|---------|
-| Files | kebab-case | `auth.service.ts`, `user-middleware.ts` |
-| Classes | PascalCase | `AuthController`, `CartsService` |
-| Functions | camelCase | `getUserById`, `createProduct` |
-| Constants | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT`, `DEFAULT_PAGE_SIZE` |
-| Interfaces | PascalCase | `UserProfile`, `CartItem` |
-| Types | PascalCase | `AuthResponse`, `CreateProductInput` |
+| Files | kebab-case | `auth.service.ts` |
+| Classes | PascalCase | `AuthController` |
+| Functions | camelCase | `getUserById` |
+| Constants | UPPER_SNAKE_CASE | `MAX_RETRIES` |
+| Interfaces | PascalCase | `UserProfile` |
 
 ### Error Handling
-
-Use custom error classes from `@utils/errors.ts`:
-
 ```typescript
-import { 
-  AppError, 
-  ValidationError, 
-  UnauthorizedError, 
-  NotFoundError, 
-  ConflictError 
-} from '@/utils/errors';
-
-// In controllers - always use try/catch with next(error)
-async register(req: Request, res: Response, next: NextFunction) {
-  try {
-    const result = await authService.register(req.body);
-    res.status(201).json({ success: true, data: result });
-  } catch (error) {
-    next(error);
-  }
-}
+import { AppError, ValidationError, UnauthorizedError } from '@/utils/errors';
+// In controllers: try/catch with next(error)
 ```
 
 ### Validation
+Use Zod schemas for input validation.
 
-Use Zod for input validation:
-
-```typescript
-import { z } from 'zod';
-
-export const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(100),
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
-});
-```
-
-### Controller Pattern
-
-```typescript
-export class AuthController {
-  async register(req: Request, res: Response, next: NextFunction) {
-    try {
-      const result = await authService.register(req.body);
-      res.status(201).json({ success: true, data: result });
-    } catch (error) {
-      next(error);
-    }
-  }
-}
-
-export const authController = new AuthController();
-```
-
-### Service Pattern
-
-```typescript
-export class AuthService {
-  async register(data: RegisterInput) {
-    const existingUser = await userRepository.findByEmail(data.email);
-    if (existingUser) {
-      throw new ConflictError('Email already registered');
-    }
-    // ... implementation
-  }
-}
-
-export const authService = new AuthService();
-```
-
-### Repository Pattern
-
-```typescript
-export class UserRepository {
-  async findByEmail(email: string) {
-    return prisma.user.findUnique({ where: { email } });
-  }
-}
-
-export const userRepository = new UserRepository();
-```
-
-### Middleware Pattern
-
-```typescript
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    throw new UnauthorizedError('No token provided');
-  }
-  // ... verify and attach user
-  next();
-};
-```
-
-### Testing Patterns
-
-Follow the auth service test pattern:
-
-```typescript
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-
-// Mock dependencies
-jest.mock('../src/repositories/user.repository', () => ({
-  userRepository: {
-    findByEmail: mockFindByEmail,
-  },
-}));
-
-describe('AuthService', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should login successfully', async () => {
-    // Arrange
-    mockFindByEmail.mockResolvedValue({ ... });
-    
-    // Act
-    const result = await authService.login({ ... });
-    
-    // Assert
-    expect(result).toHaveProperty('tokens');
-  });
-});
-```
+### Patterns
+- **Controller**: Class with async methods, try/catch, `res.json({ success: true, data: ... })`
+- **Service**: Class with business logic, throws errors
+- **Repository**: Class wrapping Prisma calls
+- **Middleware**: Functions that process request
 
 ---
 
@@ -232,39 +61,37 @@ describe('AuthService', () => {
 
 ```
 services/
-├── auth/           # Auth Service (port 3001)
-├── user/           # User Service (port 3002)
-├── product/        # Product Service (port 3003)
-├── cart/           # Cart Service (port 3004)
-├── gateway/        # API Gateway (port 3000)
-├── order/          # Order Service (port 3005)
-├── admin/          # Admin Service (port 3009)
-├── payment/        # Payment Service (NOT IMPLEMENTED - port 3006)
-├── notification/   # Notification Service (NOT IMPLEMENTED - port 3007)
-└── search/        # Search Service (NOT IMPLEMENTED - port 3008)
+├── auth/       # Port 3001
+├── user/       # Port 3002
+├── product/    # Port 3003
+├── cart/       # Port 3004
+├── gateway/    # Port 3000
+├── order/      # Port 3005
+└── admin/      # Port 3009
+Frontend/      # Port 5173
 ```
 
-### Service Structure (per service)
-
+### Per Service
 ```
 services/<service>/
 ├── src/
-│   ├── index.ts              # Entry point
-│   ├── app.ts                # Express app
-│   ├── config/               # Configuration
-│   ├── modules/              # Feature modules
-│   │   └── <feature>/
-│   │       ├── *.controller.ts
-│   │       ├── *.service.ts
-│   │       ├── *.route.ts
-│   │       ├── *.validator.ts
-│   │       └── index.ts
-│   ├── middleware/           # Shared middleware
-│   ├── repositories/         # Database repositories
-│   ├── routes/               # Route aggregation
-│   └── utils/                # Utilities (errors, logger, validate)
-├── tests/                    # Test files
-├── prisma/                   # Prisma schema
+│   ├── index.ts, app.ts
+│   ├── config/, middleware/, routes/, utils/
+│   └── modules/<feature>/*.controller/service/route/validator
+├── tests/, prisma/, package.json
+```
+
+### Frontend Structure
+```
+Frontend/
+├── src/
+│   ├── app/
+│   │   ├── pages/       # Route pages
+│   │   ├── components/  # UI components
+│   │   ├── store/       # Zustand stores
+│   │   └── lib/         # Utilities, API client
+│   └── styles/          # CSS files
+├── vite.config.ts
 └── package.json
 ```
 
@@ -272,76 +99,73 @@ services/<service>/
 
 ## Gateway Routes
 
-The gateway proxies requests to services:
-
-| Path | Service | Auth Required |
-|------|---------|---------------|
+| Path | Service | Auth |
+|------|---------|------|
 | /api/v1/auth/* | Auth (3001) | No |
 | /api/v1/users/* | User (3002) | Yes |
 | /api/v1/products/* | Product (3003) | No |
 | /api/v1/cart/* | Cart (3004) | Yes |
 | /api/v1/orders/* | Order (3005) | Yes |
-| /api/v1/payments/* | Payment (3006) | Yes |
-| /api/v1/search/* | Search (3008) | No |
 | /api/v1/admin/* | Admin (3009) | Yes |
 
 ---
 
-## Known Issues
+## Frontend (Vite + React)
 
-### 1. Missing Services
-Payment, Notification, and Search services are documented but not implemented.
+### Setup
+```bash
+cd Frontend
+npm install
+npm run dev
+```
 
-> **Note**: The following services have been FIXED:
-> - Cart routes now have `authenticate` middleware
-> - Cart/User/Product services support `x-user-id` header from gateway
-> - User service routes updated to `/users/me/*` to match gateway expectations
-> - Order service is now implemented
-> - Admin service is now implemented (port 3009)
+### Key Stack
+- **Build**: Vite
+- **Routing**: React Router v7
+- **State**: Zustand (global), TanStack Query v5 (server)
+- **UI**: MUI v7 + Radix UI
+- **Forms**: React Hook Form + Zod
+- **Styling**: Tailwind CSS v4
+
+### API Client
+```typescript
+const API_BASE = 'http://localhost:3000/api/v1';
+export async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+```
+
+### Component Pattern
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { fetchAPI } from '@/lib/api';
+
+function ProductList() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => fetchAPI<Product[]>('/products'),
+  });
+  // ...
+}
+```
 
 ---
 
-## Auto Commit & Push Workflow
+## Auto Commit & Push
 
-### Trigger Phrases
-When user says:
-- "commit koro", "commit kore dao"
-- "push koro", "push kore dao"
-- "save koro"
-- "/commit", "/push", "/done"
+Trigger: "commit koro", "push koro", "/commit", "/push"
 
-### Step-by-Step
-
-**Step 1** - Check changes:
 ```bash
-git status
-git diff --stat
-```
-
-**Step 2** - Stage all changes:
-```bash
+git status && git diff --stat
 git add -A
+git commit -m "type(scope): description"
+git push origin <branch>
 ```
-
-**Step 3** - Create commit (conventional format):
-```
-type(scope): short description
-```
-Types: `feat` | `fix` | `refactor` | `chore` | `docs` | `test`
-
-**Step 4** - Commit:
-```bash
-git commit -m "your message"
-```
-
-**Step 5** - Push:
-```bash
-git push origin <branch-name>
-```
-
-### Rules
-- Don't push directly to main/master - always check current branch
-- No changes = don't commit
+- Types: feat, fix, refactor, chore, docs, test
+- No push to main/master directly
 - Commit messages in English
-
----
