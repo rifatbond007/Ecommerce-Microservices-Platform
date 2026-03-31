@@ -133,8 +133,8 @@ The platform consists of the following microservices:
 
 ```mermaid
 flowchart TB
-    subgraph Client["Frontend - Next.js"]
-        Web["Web App<br/>localhost:3001"]
+    subgraph Client["Frontend - React + Vite"]
+        Web["Web App<br/>localhost:5173"]
         Mobile["Mobile App"]
     end
     
@@ -272,7 +272,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph Frontend["Next.js Client"]
+    subgraph Frontend["React + Vite Client"]
         FE["Frontend App"]
     end
     
@@ -320,7 +320,7 @@ flowchart LR
     end
     
     subgraph Origin["Origin Server"]
-        NextJS["Next.js Server<br/>:3000"]
+        Vite["Vite Dev/Prod Server<br/>:5173"]
         Static["Static Files<br/>/public"]
     end
     
@@ -329,7 +329,7 @@ flowchart LR
     
     Cache -->|"3. HIT"| Browser
     
-    Cache -.->|"4. MISS"| NextJS
+    Cache -.->|"4. MISS"| Vite
     NextJS -->|"5. Return asset"| Cloudflare
     Cloudflare -->|"6. Cache & return"| Browser
 ```
@@ -348,7 +348,7 @@ flowchart LR
 
 1. Product images uploaded to cloud storage (S3/Cloudinary)
 2. Images served through CDN with cache headers
-3. Next.js serves bundled JS/CSS with hash-based filenames
+3. Vite serves bundled JS/CSS with hash-based filenames
 4. Manifest file maps to cached versions
 
 ## Redis Caching Layer
@@ -395,7 +395,7 @@ flowchart TB
 
 ```mermaid
 sequenceDiagram
-    participant Client as Next.js
+    participant Client as React + Vite
     participant Gateway as API Gateway
     participant Auth as Auth Service
     participant User as User Service
@@ -443,7 +443,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Client as Next.js
+    participant Client as React + Vite
     participant Gateway as API Gateway
     participant Search as Search Service
     participant Product as Product Service
@@ -496,7 +496,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Client as Next.js
+    participant Client as React + Vite
     participant Gateway as API Gateway
     participant Order as Order Service
     participant Payment as Payment Service
@@ -1894,7 +1894,7 @@ const metricsMiddleware = (req: Request, res: Response, next: NextFunction) => {
 
 ```mermaid
 sequenceDiagram
-    participant Client as Next.js Client
+    participant Client as React + Vite Client
     participant Gateway as API Gateway
     participant Auth as Auth Service
     participant Redis as Redis

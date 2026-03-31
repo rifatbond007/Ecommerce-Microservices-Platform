@@ -25,8 +25,8 @@ This e-commerce platform consists of 10 microservices, each responsible for a sp
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND (Next.js)                          │
-│                              localhost:3001                              │
+│                          FRONTEND (React + Vite)                        │
+│                              localhost:5173                            │
 └─────────────────────────────────┬───────────────────────────────────────┘
                                   │
                                   │ HTTPS/REST
