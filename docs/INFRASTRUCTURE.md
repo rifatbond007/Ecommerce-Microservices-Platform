@@ -8,7 +8,7 @@
 |----------|------------|---------|---------|
 | Runtime | Node.js | 20 LTS | JavaScript runtime for all microservices |
 | Framework | Express.js | 4.18.x | Web framework for REST APIs |
-| Frontend | Next.js | 14.x | React framework with SSR/SSG |
+| Frontend | React + Vite | Latest | React framework with client-side rendering |
 | Database | PostgreSQL | 16 | Primary relational database |
 | Cache | Redis | 7.2 | In-memory cache and session storage |
 | Message Broker | RabbitMQ | 3.12 | Asynchronous event communication |
@@ -420,15 +420,15 @@ FRONTEND_URL=http://localhost:3001
 #### Frontend (.env.local)
 
 ```env
-# Next.js Configuration
-NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:3000
+# Vite Configuration
+VITE_API_GATEWAY_URL=http://localhost:3000
 
 # Authentication
-NEXT_PUBLIC_AUTH_TOKEN_KEY=auth_token
-NEXT_PUBLIC_REFRESH_TOKEN_KEY=refresh_token
+VITE_AUTH_TOKEN_KEY=auth_token
+VITE_REFRESH_TOKEN_KEY=refresh_token
 
 # Development Server
-NEXT_PUBLIC_DEV_URL=http://localhost:3001
+VITE_DEV_URL=http://localhost:5173
 ```
 
 ---

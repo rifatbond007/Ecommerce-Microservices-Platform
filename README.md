@@ -1,6 +1,6 @@
 # E-Commerce Microservices Platform
 
-A full-featured e-commerce platform built with 10 microservices using Node.js, Express.js, Next.js, PostgreSQL, Redis, and RabbitMQ.
+A full-featured e-commerce platform built with 10 microservices using Node.js, Express.js, React + Vite, PostgreSQL, Redis, and RabbitMQ.
 
 ---
 
@@ -8,8 +8,8 @@ A full-featured e-commerce platform built with 10 microservices using Node.js, E
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         Frontend (Next.js)                          │
-│                           localhost:3001                            │
+│                       Frontend (React + Vite)                       │
+│                           localhost:5173                            │
 └─────────────────────────────────────┬───────────────────────────────┘
                                       │ HTTPS/REST
                                       ▼
@@ -51,7 +51,7 @@ A full-featured e-commerce platform built with 10 microservices using Node.js, E
 |----------|------------|
 | Runtime | Node.js 20 LTS |
 | Backend Framework | Express.js |
-| Frontend | Next.js 14 |
+| Frontend | React + Vite |
 | Database | PostgreSQL 16 |
 | Cache | Redis 7.2 |
 | Message Broker | RabbitMQ 3.12 |
@@ -116,7 +116,7 @@ npm run dev
 
 | Service | URL |
 |--------|-----|
-| Frontend | http://localhost:3001 |
+| Frontend | http://localhost:5173 |
 | API Gateway | http://localhost:3000 |
 | RabbitMQ Management | http://localhost:15672 |
 | PostgreSQL | localhost:5432 |
