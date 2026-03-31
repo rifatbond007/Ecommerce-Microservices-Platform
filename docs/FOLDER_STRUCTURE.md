@@ -34,10 +34,12 @@ ecommerce-microservices/
 │   ├── config/                  # Shared configuration
 │   └── events/                  # Shared event definitions
 │
-└── frontend/                    # Next.js frontend
+└── frontend/                    # React + Vite frontend
     ├── src/
     ├── public/
-    └── package.json
+    ├── package.json
+    ├── vite.config.ts
+    └── tailwind.config.js
 ```
 
 ---
@@ -263,12 +265,15 @@ packages/events/
 
 ---
 
-## Frontend (Next.js)
+## Frontend (React + Vite)
 
 ```
 frontend/
 ├── package.json
-├── next.config.js
+├── vite.config.ts
+├── tailwind.config.js
+├── postcss.config.mjs
+├── index.html
 ├── .env.local
 ├── .env.development
 ├── .env.production
@@ -279,90 +284,74 @@ frontend/
 │   └── favicon.ico
 │
 ├── src/
-│   ├── app/                    # Next.js 14 App Router
-│   │   ├── (auth)/
-│   │   │   ├── login/
-│   │   │   │   └── page.jsx
-│   │   │   └── register/
-│   │   │       └── page.jsx
+│   ├── app/                      # Main app directory
+│   │   ├── pages/               # Route pages
+│   │   │   ├── home-page.tsx
+│   │   │   ├── auth/
+│   │   │   │   ├── login-page.tsx
+│   │   │   │   ├── register-page.tsx
+│   │   │   │   └── forgot-password-page.tsx
+│   │   │   ├── product-listing-page.tsx
+│   │   │   ├── product-detail-page.tsx
+│   │   │   ├── search-page.tsx
+│   │   │   ├── user/
+│   │   │   │   ├── profile-page.tsx
+│   │   │   │   ├── account-page.tsx
+│   │   │   │   ├── addresses-page.tsx
+│   │   │   │   ├── orders-page.tsx
+│   │   │   │   ├── order-detail-page.tsx
+│   │   │   │   ├── cart-page.tsx
+│   │   │   │   ├── checkout-page.tsx
+│   │   │   │   ├── wishlists-page.tsx
+│   │   │   │   ├── reviews-page.tsx
+│   │   │   │   └── become-seller-page.tsx
+│   │   │   ├── seller/
+│   │   │   │   ├── seller-dashboard-page.tsx
+│   │   │   │   ├── seller-products-page.tsx
+│   │   │   │   └── seller-product-form-page.tsx
+│   │   │   └── admin/
+│   │   │       ├── admin-dashboard-page.tsx
+│   │   │       ├── admin-users-page.tsx
+│   │   │       ├── admin-products-page.tsx
+│   │   │       ├── admin-orders-page.tsx
+│   │   │       └── admin-seller-requests-page.tsx
 │   │   │
-│   │   ├── (shop)/
-│   │   │   ├── products/
-│   │   │   │   ├── page.jsx
-│   │   │   │   └── [slug]/
-│   │   │   │       └── page.jsx
-│   │   │   ├── cart/
-│   │   │   │   └── page.jsx
-│   │   │   └── orders/
-│   │   │       └── page.jsx
+│   │   ├── layouts/             # Layout components
+│   │   │   ├── root-layout.tsx
+│   │   │   └── dashboard-layout.tsx
 │   │   │
-│   │   ├── admin/
-│   │   │   ├── dashboard/
-│   │   │   │   └── page.jsx
-│   │   │   └── users/
-│   │   │       └── page.jsx
-│   │   │
-│   │   ├── layout.jsx
-│   │   ├── page.jsx           # Home page
-│   │   └── not-found.jsx
+│   │   ├── routes.tsx          # React Router configuration
+│   │   └── App.tsx             # Root component
 │   │
 │   ├── components/            # Reusable components
-│   │   ├── ui/               # Base UI components
-│   │   │   ├── Button.jsx
-│   │   │   ├── Input.jsx
-│   │   │   └── Card.jsx
+│   │   ├── ui/                # Base UI components (Radix/MUI)
+│   │   │   ├── button.tsx
+│   │   │   ├── input.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── dialog.tsx
+│   │   │   ├── dropdown-menu.tsx
+│   │   │   └── ... (all Radix UI primitives)
 │   │   │
-│   │   ├── auth/             # Auth components
-│   │   │   ├── LoginForm.jsx
-│   │   │   └── RegisterForm.jsx
+│   │   ├── layout/            # Layout components
+│   │   │   ├── header.tsx
+│   │   │   └── footer.tsx
 │   │   │
-│   │   ├── products/         # Product components
-│   │   │   ├── ProductCard.jsx
-│   │   │   ├── ProductGrid.jsx
-│   │   │   └── ProductFilter.jsx
-│   │   │
-│   │   ├── cart/             # Cart components
-│   │   │   ├── CartItem.jsx
-│   │   │   └── CartSummary.jsx
-│   │   │
-│   │   └── layout/           # Layout components
-│   │       ├── Header.jsx
-│   │       ├── Footer.jsx
-│   │       └── Sidebar.jsx
+│   │   └── product-card.tsx
 │   │
-│   ├── hooks/                # Custom React hooks
-│   │   ├── useAuth.js
-│   │   ├── useCart.js
-│   │   ├── useProducts.js
-│   │   └── index.js
+│   ├── store/                 # Zustand stores
+│   │   ├── auth-store.ts
+│   │   └── cart-store.ts
 │   │
-│   ├── lib/                  # Libraries and utilities
-│   │   ├── api.js           # Axios instance
-│   │   ├── auth.js          # Auth utilities
-│   │   └── utils.js
+│   ├── lib/                   # Utilities
+│   │   ├── api.ts             # API client
+│   │   ├── mock-data.ts
+│   │   └── utils.ts
 │   │
-│   ├── store/               # State management (Zustand/Redux)
-│   │   ├── authStore.js
-│   │   ├── cartStore.js
-│   │   └── index.js
-│   │
-│   ├── context/             # React Context
-│   │   ├── AuthContext.jsx
-│   │   └── CartContext.jsx
-│   │
-│   ├── services/            # API service modules
-│   │   ├── auth.service.js
-│   │   ├── product.service.js
-│   │   ├── cart.service.js
-│   │   └── order.service.js
-│   │
-│   └── styles/             # Global styles
-│       ├── globals.css
-│       └── variables.css
+│   └── styles/               # Global styles
+│       └── globals.css
 │
-├── tests/                  # Frontend tests
-│   ├── components/
-│   └── hooks/
+├── guidelines/
+│   └── Guidelines.md
 │
 └── README.md
 ```
@@ -467,15 +456,17 @@ ecommerce-microservices/
 │
 └── frontend/
     ├── package.json
-    ├── next.config.js
+    ├── vite.config.ts
+    ├── tailwind.config.js
+    ├── postcss.config.mjs
+    ├── index.html
     ├── .env.local
     ├── public/
     └── src/
         ├── app/
         ├── components/
-        ├── hooks/
+        ├── store/
         ├── lib/
-        ├── services/
         └── styles/
 ```
 
