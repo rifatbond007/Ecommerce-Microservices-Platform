@@ -31,21 +31,31 @@ export class RouterService {
 
   findRoute(path: string, method: string): ServiceRoute | undefined {
     const normalizedPath = path.replace(/^\/api\/v1/, '');
+
+    const routesWithoutPrefix = this.routes.map(r => ({
+      ...r,
+      path: r.path.replace(/^\/api\/v1/, ''),
+    }));
+
     const normalizedMethod = method.toUpperCase();
 
-    const exactMatch = this.routes.find(
+    const exactMatch = routesWithoutPrefix.find(
       (route) => route.path === normalizedPath && 
                  (route.method === 'ALL' || route.method === normalizedMethod)
     );
 
-    if (exactMatch) return exactMatch;
+    if (exactMatch) return this.routes.find(r => r.path === `/${exactMatch.path.replace(/^\//, '')}`);
 
-    const prefixMatch = this.routes.find((route) => {
+    const prefixMatch = routesWithoutPrefix.find((route) => {
       if (route.method !== 'ALL' && route.method !== normalizedMethod) return false;
       return normalizedPath.startsWith(route.path);
     });
 
-    return prefixMatch;
+    if (prefixMatch) {
+      return this.routes.find(r => r.path === `/${prefixMatch.path.replace(/^\//, '')}`);
+    }
+
+    return undefined;
   }
 
   resolveTargetService(path: string, method: string): { 
