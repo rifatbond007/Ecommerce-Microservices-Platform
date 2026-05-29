@@ -132,6 +132,7 @@ services/
 ├── cart/        (Port 3004)   # Shopping cart
 ├── order/       (Port 3005)   # Orders, tracking, returns
 ├── payment/     (Port 3006)   # Payment processing, refunds, webhooks
+├── notification/ (Port 3007)  # Email, SMS, push notifications
 └── admin/       (Port 3009)   # Admin dashboard
 ```
 
@@ -194,6 +195,7 @@ Frontend/
 | /api/v1/cart/* | Cart (3004) | Yes |
 | /api/v1/orders/* | Order (3005) | Yes |
 | /api/v1/payments/* | Payment (3006) | Yes |
+| /api/v1/notifications/* | Notification (3007) | Yes |
 | /api/v1/admin/* | Admin (3009) | Yes |
 
 ### Authentication
