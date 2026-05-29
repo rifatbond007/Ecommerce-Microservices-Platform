@@ -1,0 +1,120 @@
+{
+  "rabbit_version": "3.12.0",
+  "rabbitmq_version": "3.12.0",
+  "product_name": "RabbitMQ",
+  "product_version": "3.12.0",
+  "users": [
+    {
+      "name": "guest",
+      "password_hash": "guest",
+      "hashing_algorithm": "rabbit_password_hashing_md5",
+      "tags": ["administrator"]
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "guest",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "topic_exchanges": [
+    {
+      "name": "ecommerce.events",
+      "type": "topic",
+      "auto_delete": false,
+      "durable": true,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "order.created",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "order.status_changed",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "payment.completed",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "payment.failed",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "notification.email",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "search.product_index",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "ecommerce.events",
+      "vhost": "/",
+      "destination": "order.created",
+      "destination_type": "queue",
+      "routing_key": "order.created"
+    },
+    {
+      "source": "ecommerce.events",
+      "vhost": "/",
+      "destination": "order.status_changed",
+      "destination_type": "queue",
+      "routing_key": "order.status_changed"
+    },
+    {
+      "source": "ecommerce.events",
+      "vhost": "/",
+      "destination": "payment.completed",
+      "destination_type": "queue",
+      "routing_key": "payment.completed"
+    },
+    {
+      "source": "ecommerce.events",
+      "vhost": "/",
+      "destination": "payment.failed",
+      "destination_type": "queue",
+      "routing_key": "payment.failed"
+    },
+    {
+      "source": "ecommerce.events",
+      "vhost": "/",
+      "destination": "notification.email",
+      "destination_type": "queue",
+      "routing_key": "notification.*"
+    },
+    {
+      "source": "ecommerce.events",
+      "vhost": "/",
+      "destination": "search.product_index",
+      "destination_type": "queue",
+      "routing_key": "product.#"
+    }
+  ]
+}
