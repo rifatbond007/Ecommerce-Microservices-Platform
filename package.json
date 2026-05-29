@@ -1,0 +1,34 @@
+{
+  "name": "ecommerce-microservices",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E-commerce Microservices Platform",
+  "workspaces": [
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:gateway": "npm run dev --workspace=services/gateway",
+    "dev:auth": "npm run dev --workspace=services/auth",
+    "dev:user": "npm run dev --workspace=services/user",
+    "dev:product": "npm run dev --workspace=services/product",
+    "dev:cart": "npm run dev --workspace=services/cart",
+    "dev:order": "npm run dev --workspace=services/order",
+    "dev:payment": "npm run dev --workspace=services/payment",
+    "dev:notification": "npm run dev --workspace=services/notification",
+    "dev:search": "npm run dev --workspace=services/search",
+    "dev:admin": "npm run dev --workspace=services/admin",
+    "dev:all": "concurrently \"npm run dev:*\"",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
