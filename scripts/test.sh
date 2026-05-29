@@ -28,6 +28,10 @@ echo ">>> Running order-service tests..."
 cd "$PROJECT_DIR/services/order" && npm test
 
 echo ""
+echo ">>> Running payment-service tests..."
+cd "$PROJECT_DIR/services/payment" && npm test
+
+echo ""
 echo ">>> Running admin-service tests..."
 cd "$PROJECT_DIR/services/admin" && npm test
 
