@@ -7,18 +7,20 @@ cd services/user && npm run dev &
 cd services/product && npm run dev &
 cd services/cart && npm run dev &
 cd services/order && npm run dev &
+cd services/payment && npm run dev &
 cd services/admin && npm run dev &
 cd services/gateway && npm run dev &
-cd Frontend && npm run dev &
+cd frontend && npm run dev &
 
 echo "All services started!"
-echo "Frontend: http://localhost:5173"
-echo "Gateway: http://localhost:3000"
-echo "Auth: http://localhost:3001"
-echo "User: http://localhost:3002"
-echo "Product: http://localhost:3003"
-echo "Cart: http://localhost:3004"
-echo "Order: http://localhost:3005"
-echo "Admin: http://localhost:3009"
+echo "Frontend: http://localhost:3000"
+echo "Gateway: http://localhost:8000"
+echo "Auth: http://localhost:8001"
+echo "User: http://localhost:8002"
+echo "Product: http://localhost:8003"
+echo "Cart: http://localhost:8004"
+echo "Order: http://localhost:8005"
+echo "Payment: http://localhost:8006"
+echo "Admin: http://localhost:8009"
 
 wait
