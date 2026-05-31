@@ -59,7 +59,7 @@ export class RouterService {
   }
 
   resolveTargetService(path: string, method: string): { 
-    service: keyof ReturnType<typeof import('../../config').config.services>; 
+    service: keyof typeof import('../../config').config.services; 
     url: string;
     authRequired: boolean;
   } | null {

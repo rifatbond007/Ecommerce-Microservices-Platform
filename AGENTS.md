@@ -1,241 +1,146 @@
-# AGENTS.md — Codebase Rules
-
-This file provides guidelines for AI agents working in this e-commerce microservices repository.
+# AGENTS.md — E-Commerce Microservices
 
 ---
 
-## Build / Lint / Test Commands
+## Key Commands
 
-### Per-Service Commands (run from service directory)
-```bash
-npm run dev              # Start with hot-reload (ts-node-dev)
-npm run build            # Compile TypeScript to dist/
-npm run start            # Run compiled JS from dist/
-npm run test             # Run all Jest tests
-npm run test:watch       # Watch mode for tests
-npm run test:coverage    # With coverage report
-npm run lint             # ESLint with TypeScript support
-npm run lint:fix         # Auto-fix ESLint issues
-npm run typecheck        # TypeScript type checking
-npm run prisma:generate  # Generate Prisma client
-npm run prisma:migrate   # Run database migrations
+Run from service directory (`services/<name>/`):
+```
+npm run dev              # ts-node-dev hot-reload
+npm run build            # tsc → dist/ (also serves as type-check)
+npm run test             # Jest (all tests)
+npm run test:watch       # Jest --watch
+npm run test:coverage    # Jest --coverage
+npm run test -- --testPathPattern="auth.service.test.ts"  # single file
+npm run test -- --testNamePattern="should authenticate"   # single test
+npm run lint             # ESLint
+npm run lint:fix         # ESLint --fix
+npm run prisma:generate  # generate Prisma client
+npm run prisma:migrate   # run migrations
+npm run prisma:push      # push schema without migration
 ```
 
-### Running Tests
-- **Single test file**: `npm run test -- --testPathPattern="auth.service.test.ts"`
-- **Single test function**: `npm run test -- --testNamePattern="should authenticate"`
-- **Watch single file**: `npm run test -- --testPathPattern="auth" --watch`
+Root workspace shortcuts:
+```
+npm run dev:auth  npm run dev:gateway  npm run dev:user  npm run dev:product
+npm run dev:cart  npm run dev:order    npm run dev:payment  npm run dev:notification
+npm run dev:search  npm run dev:admin
+npm run dev:all     # start all 10 concurrently
+npm run build       # all workspaces
+npm run test        # all workspaces
+npm run lint        # all workspaces
+```
+
+Makefile (root):
+```
+make infra-up       # docker-compose up + health checks
+make infra-down     # docker-compose down
+make dev-auth       # start one service (npm)
+make dev-all        # start all services (npm)
+make test           # test all services
+make test-auth      # test one service
+make setup          # install + prisma generate + db push for all
+make stop           # kill service processes
+make clean          # stop services + infra-down
+make docker-build   # build all 10 Docker images
+make docker-up      # docker compose up (full stack)
+make docker-down    # docker compose down
+```
+- Compose file: `infra/docker-compose.yml` (defines postgres, redis, rabbitmq + all 10 services)
+- Each service has a `Dockerfile` + `.dockerignore` (multi-stage build)
+- Build individual: `docker build -t ecommerce/auth:latest services/auth`
+- Docker infra creds: postgres/postgres, rabbitmq guest/guest. Update `.env` files from `.env.example` with real credentials.
 
 ---
 
-## Code Style Guidelines
+## Architecture
 
-### TypeScript Configuration
-Strict mode enabled with: `strict`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals`, `noUnusedParameters`
+10 Express.js microservices behind an API Gateway (workspaces: `services/*`, `packages/*` — no packages/ directory exists yet):
 
-### Import Order (top to bottom)
-1. Node.js built-in (path, fs, crypto)
-2. External packages (express, prisma, zod, jwt)
-3. Internal @ aliases (@config, @services, @controllers)
-4. Relative imports (../utils, ./services)
+| Service | Port | Schema | Auth |
+|---------|------|--------|------|
+| gateway | 3000 | gateway | - |
+| auth | 3001 | auth | No |
+| user | 3002 | user_service | Yes |
+| product | 3003 | product_service | No |
+| cart | 3004 | cart_service | Yes |
+| order | 3005 | order_schema | Yes |
+| payment | 3006 | payment_service | Yes |
+| notification | 3007 | notification_service | Yes |
+| search | 3008 | search_service | No |
+| admin | 3009 | admin_service | Yes |
 
-### Naming Conventions
-| Type | Convention | Example |
-|------|------------|---------|
-| Files | kebab-case | `auth.service.ts` |
-| Classes | PascalCase | `AuthController` |
-| Functions | camelCase | `getUserById` |
-| Constants | UPPER_SNAKE_CASE | `MAX_RETRIES` |
-| Interfaces | PascalCase | `UserProfile` |
-| Enums | PascalCase | `OrderStatus` |
-| DB Tables | snake_case | `user_profiles` |
-
-### Error Handling
-```typescript
-import { AppError, ValidationError, UnauthorizedError } from '@/utils/errors';
-try {
-  // business logic
-} catch (error) {
-  if (error instanceof AppError) {
-    return res.status(error.statusCode).json({ success: false, message: error.message });
-  }
-  next(error);
-}
-```
-
-### Validation
-Use Zod schemas in `src/validators/` for request validation:
-```typescript
-import { z } from 'zod';
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-```
+- All services share one PostgreSQL via **separate schemas** (`auth`, `user_service`, etc.)
+- Init schemas in `infra/postgres/init-scripts/init-schemas.sql`
+- Redis for caching/sessions, RabbitMQ for async events
+- JWT access tokens (15m) + refresh tokens (7d) via `Authorization: Bearer <token>`
 
 ---
 
-## Code Patterns
+## Per-Service Structure
 
-### Controller
-```typescript
-class AuthController {
-  async register(req: Request, res: Response, next: NextFunction) {
-    try {
-      const result = await this.authService.register(req.body);
-      res.status(201).json({ success: true, data: result });
-    } catch (error) { next(error); }
-  }
-}
+Each service follows the modular pattern:
+
+```
+src/
+├── index.ts                 # entry point
+├── app.ts                   # Express app setup
+├── config/
+├── modules/<feature>/       # self-contained feature modules
+│   ├── <feature>.controller.ts
+│   ├── <feature>.service.ts
+│   ├── <feature>.route.ts
+│   ├── <feature>.validator.ts  # Zod schemas
+│   ├── <feature>.middleware.ts
+│   ├── <feature>.types.ts
+│   └── index.ts
+├── middleware/               # shared middleware
+├── repositories/             # data access layer
+├── routes/                   # main router
+├── utils/                    # logger, errors, jwt, validate, email
+└── (gateway also has src/shared/)
+tests/
+prisma/schema.prisma
 ```
 
-### Service
-```typescript
-class AuthService {
-  async register(dto: RegisterDto): Promise<User> {
-    const existing = await this.userRepo.findByEmail(dto.email);
-    if (existing) throw new ValidationError('Email already exists');
-    // business logic...
-  }
-}
-```
+**Import alias**: `@/*` maps to `src/` via tsconfig paths and jest `moduleNameMapper`.
 
-### Repository
+**Error response format**:
 ```typescript
-class UserRepository {
-  async findByEmail(email: string): Promise<User | null> {
-    return prisma.user.findUnique({ where: { email } });
-  }
-}
+{ success: false, error: { code: 'VALIDATION_ERROR', message: '...', details?: ... } }
 ```
-
-### Middleware
-```typescript
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) throw new UnauthorizedError('No token provided');
-  // verify token...
-  next();
-};
-```
+Error classes extend `AppError(statusCode, errorCode, message)`.
 
 ---
 
-## Project Structure
+## Frontend (React + Vite)
 
 ```
-services/
-├── gateway/     (Port 3000)   # API Gateway, routing, auth
-├── auth/        (Port 3001)   # Auth, JWT, sessions, roles
-├── user/        (Port 3002)   # Profiles, addresses, reviews
-├── product/     (Port 3003)   # Products, categories, inventory
-├── cart/        (Port 3004)   # Shopping cart
-├── order/       (Port 3005)   # Orders, tracking, returns
-├── payment/     (Port 3006)   # Payment processing, refunds, webhooks
-├── notification/ (Port 3007)  # Email, SMS, push notifications
-├── search/      (Port 3008)   # Search, suggestions, trending
-└── admin/       (Port 3009)   # Admin dashboard
-```
-
-### Per Service Structure
-```
-services/<service>/
+frontend/
 ├── src/
-│   ├── index.ts, app.ts, config/
-│   ├── controllers/, services/, repositories/
-│   ├── middleware/, routes/, validators/, utils/, types/
-├── tests/, prisma/, package.json
+│   ├── app/         pages + layouts + routes (react-router-dom)
+│   ├── components/  shadcn/ui (Radix primitives), feature components
+│   ├── store/       Zustand stores
+│   ├── lib/         API client (axios), utils
+│   └── styles/      globals.css (Tailwind)
+├── vite.config.ts   proxy /api → localhost:3000
+└── tailwind.config.js
 ```
 
----
-
-## Frontend (Next.js)
-
-### Setup
-```bash
-cd Frontend
-npm install
-npm run dev
-```
-
-### Tech Stack
-- **Framework**: Next.js 14 (App Router)
-- **UI**: Tailwind CSS + shadcn/ui
-- **State**: Zustand, TanStack Query
-- **Forms**: React Hook Form + Zod
-
-### Folder Structure
-```
-Frontend/
-├── src/
-│   ├── app/                    # App Router pages
-│   │   ├── (auth)/             # Auth route group
-│   │   ├── (dashboard)/       # Protected routes
-│   │   ├── api/                # API routes
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/            # Shared components
-│   │   ├── ui/                 # shadcn/ui components
-│   │   └── ...                 # Feature components
-│   ├── lib/                    # Utilities, API client
-│   ├── stores/                 # Zustand stores
-│   └── types/                  # TypeScript types
-├── package.json
-└── next.config.js
-```
-
----
-
-## Gateway Routes
-
-| Path | Service | Auth |
-|------|---------|------|
-| /api/v1/auth/* | Auth (3001) | No |
-| /api/v1/users/* | User (3002) | Yes |
-| /api/v1/products/* | Product (3003) | No |
-| /api/v1/cart/* | Cart (3004) | Yes |
-| /api/v1/orders/* | Order (3005) | Yes |
-| /api/v1/payments/* | Payment (3006) | Yes |
-| /api/v1/notifications/* | Notification (3007) | Yes |
-| /api/v1/search/* | Search (3008) | No |
-| /api/v1/admin/* | Admin (3009) | Yes |
-
-### Authentication
-- JWT access tokens: 15 min expiry
-- Refresh tokens: 7 days expiry
-- Pass via `Authorization: Bearer <token>`
-
----
-
-## Development Workflow
+Stack: React 18, Vite 5, react-router-dom, Zustand, Tailwind CSS, shadcn/ui (Radix), Axios.
 
 ```bash
-cd services/<service-name>
-cp .env.example .env
-npm install
-npm run prisma:generate
-npm run dev
+cd frontend && npm run dev   # localhost:5173
 ```
 
-### Feature Creation Order
-1. Add route in `src/routes/`
-2. Add controller in `src/controllers/`
-3. Add service in `src/services/`
-4. Add repository in `src/repositories/`
-5. Add validator in `src/validators/`
-6. Write tests in `tests/`
+Note: `npm run build` runs `tsc && vite build` — pre-existing TS errors may cause it to fail. Dev mode (Vite esbuild transpilation) works fine.
 
 ---
 
-## Auto Commit & Push
+## Tests
 
-Trigger: "commit koro", "push koro", "/commit", "/push"
-```bash
-git status && git diff --stat
-git add -A
-git commit -m "type(scope): description"
-git push origin <branch>
-```
-- **Types**: feat, fix, refactor, chore, docs, test
-- **Branch**: Never push to main/master directly
-- **Messages**: Always in English
+- Jest + ts-jest, `tests/` directory, `**/*.test.ts` pattern
+- Mocks are inline per test file (manual `jest.mock()` calls)
+- Root `npm run test` runs all workspaces (services)
+- No integration test prerequisites beyond infra being up
+- Each service has `tsconfig.test.json` (extends `tsconfig.json` with `strict: false`) — it's what jest configs reference via `ts-jest`

@@ -42,7 +42,7 @@ const setupRoutes = () => {
     }
 
     const authMiddlewareToUse = resolved.authRequired ? authMiddleware : optionalAuthMiddleware;
-    authMiddlewareToUse(req, res, (err?: Error) => {
+    authMiddlewareToUse(req, res, (err?: any) => {
       if (err) {
         next(err);
         return;
