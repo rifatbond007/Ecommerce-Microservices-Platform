@@ -1,14 +1,18 @@
 SERVICES := gateway auth user product cart order payment notification search admin
-PORTS    := 3000 3001 3002 3003 3004 3005 3006 3007 3008 3009
 INFRA_DIR := infra
+SHELL   := /bin/bash
+.DEFAULT_GOAL := help
 
-.PHONY: help infra-up infra-down infra-status dev dev-all dev-% test test-% lint lint-% build stop clean setup docker-build docker-up docker-down
+.PHONY: help infra-up infra-down infra-status dev dev-all dev-% \
+        test test-% lint lint-% build build-% install-% stop clean \
+        setup setup-% docker-build docker-up docker-down
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# Infrastructure
+# ── Infrastructure ──────────────────────────────────────────────
+
 infra-up: ## Start Docker infra (PostgreSQL, Redis, RabbitMQ) with health checks
 	cd $(INFRA_DIR) && docker compose up -d postgres redis rabbitmq
 	@echo "Waiting for PostgreSQL..."; \
@@ -28,55 +32,96 @@ infra-down: ## Stop Docker infra
 infra-status: ## Show Docker infra container status
 	cd $(INFRA_DIR) && docker compose ps
 
-# Service dev
+# ── Service dev ──────────────────────────────────────────────────
+
 dev-all: ## Start all services concurrently
 	npm run dev:all
 
-dev-%: ## Start one service (e.g., make dev-auth, make dev-gateway)
-	npm run dev:$(subst dev-,,$@)
+dev-%: ## Start one service (e.g., make dev-auth)
+	$(eval _svc := $(subst dev-,,$@))
+	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
+	npm run dev:$(_svc)
 
-# Test
-test: ## Run all service tests
-	npm run test
+# ── Setup & Install ──────────────────────────────────────────────
 
-test-%: ## Test one service (e.g., make test-auth)
-	cd services/$(subst test-,,$@) && npm test
-
-# Lint
-lint: ## Lint all services
-	npm run lint
-
-lint-%: ## Lint one service (e.g., make lint-auth)
-	cd services/$(subst lint-,,$@) && npm run lint
-
-# Build
-build: ## Build all services
-	npm run build
-
-# Setup
 setup: ## Install deps, generate Prisma, push DB schemas for all services
-	for svc in $(SERVICES); do \
-		cd services/$$svc && npm install && npx prisma generate && npx prisma db push && cd ../..; \
+	@for svc in $(SERVICES); do \
+		$(MAKE) setup-$$svc || exit 1; \
 	done
 
 setup-%: ## Setup one service (e.g., make setup-auth)
-	cd services/$(subst setup-,,$@) && npm install && npx prisma generate && npx prisma db push
+	$(eval _svc := $(subst setup-,,$@))
+	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
+	@echo "=== Setting up $(_svc) ==="
+	@if [ ! -f services/$(_svc)/.env ] && [ -f services/$(_svc)/.env.example ]; then \
+		cp services/$(_svc)/.env.example services/$(_svc)/.env; \
+		echo "  Created .env from .env.example"; \
+	fi
+	(cd services/$(_svc) && npm install && npx prisma generate && npx prisma db push)
 
-# Cleanup
-stop: ## Kill all service processes (keep infra running)
-	-pkill -f "ts-node-dev" 2>/dev/null || true; \
-	for port in $(PORTS); do fuser -k $$port/tcp 2>/dev/null || true; done
+install-%: ## Install deps for one service (e.g., make install-auth)
+	$(eval _svc := $(subst install-,,$@))
+	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
+	cd services/$(_svc) && npm install
 
-clean: stop infra-down ## Stop everything (services + infra)
+# ── Test ─────────────────────────────────────────────────────────
 
-# Docker full-stack
-docker-build: ## Build Docker images for all services
-	for svc in $(SERVICES); do \
-		docker build -t ecommerce/$$svc:latest services/$$svc; \
-	done
+test: ## Run all service tests (via npm workspaces)
+	npm run test --workspaces --if-present
 
-docker-up: infra-up ## Start full stack (infra + services)
-	cd $(INFRA_DIR) && docker compose up -d gateway auth user product cart order payment notification search admin
+test-%: ## Test one service (e.g., make test-auth)
+	$(eval _svc := $(subst test-,,$@))
+	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
+	npm run test --workspace=services/$(_svc)
+
+# ── Lint ─────────────────────────────────────────────────────────
+
+lint: ## Run all service tests (via npm workspaces)
+	npm run lint --workspaces --if-present
+
+lint-%: ## Lint one service (e.g., make lint-auth)
+	$(eval _svc := $(subst lint-,,$@))
+	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
+	npm run lint --workspace=services/$(_svc)
+
+# ── Build ────────────────────────────────────────────────────────
+
+build: ## Build (tsc) all services
+	npm run build --workspaces --if-present
+
+build-%: ## Build one service (e.g., make build-auth)
+	$(eval _svc := $(subst build-,,$@))
+	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
+	npm run build --workspace=services/$(_svc)
+
+# ── Docker ───────────────────────────────────────────────────────
+
+DOCKER_TAG ?= latest
+
+docker-build: ## Build Docker images for all services (parallel). Override tag: DOCKER_TAG=v1.0
+	@for svc in $(SERVICES); do \
+		echo "=== Building ecommerce/$$svc:$(DOCKER_TAG) ==="; \
+		docker build -t ecommerce/$$svc:$(DOCKER_TAG) services/$$svc & \
+	done; \
+	wait; \
+	echo "All images built."
+
+docker-build-%: ## Build one service Docker image (e.g., make docker-build-auth)
+	$(eval _svc := $(subst docker-build-,,$@))
+	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
+	docker build -t ecommerce/$(_svc):$(DOCKER_TAG) services/$(_svc)
+
+docker-up: infra-up ## Start full stack (infra + all services)
+	cd $(INFRA_DIR) && docker compose up -d $(SERVICES)
 
 docker-down: ## Stop full stack
 	cd $(INFRA_DIR) && docker compose down
+
+# ── Cleanup ──────────────────────────────────────────────────────
+
+stop: ## Kill all service processes (keep infra running)
+	@echo "Stopping service processes..."
+	-pkill -f "ts-node-dev" 2>/dev/null || true
+	@echo "Done."
+
+clean: stop infra-down ## Stop everything (services + infra)
