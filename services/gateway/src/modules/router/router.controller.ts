@@ -28,6 +28,27 @@ proxy.on('econnreset', (err, req, res) => {
   logger.error('Connection reset by upstream:', err);
 });
 
+proxy.on('proxyReq', (proxyReq, req: any) => {
+  if (req.rawBody) {
+    proxyReq.setHeader('Content-Length', Buffer.byteLength(req.rawBody));
+    proxyReq.write(req.rawBody);
+  }
+});
+
+proxy.on('proxyRes', (proxyRes) => {
+  const headersToRemove = [
+    'access-control-allow-origin',
+    'access-control-allow-credentials',
+    'access-control-allow-methods',
+    'access-control-allow-headers',
+    'access-control-expose-headers',
+    'access-control-max-age',
+  ];
+  headersToRemove.forEach((header) => {
+    delete proxyRes.headers[header];
+  });
+});
+
 export interface ServiceRoute {
   path: string;
   method: string;
