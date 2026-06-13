@@ -44,7 +44,10 @@ export class RouterService {
                  (route.method === 'ALL' || route.method === normalizedMethod)
     );
 
-    if (exactMatch) return this.routes.find(r => r.path === `/${exactMatch.path.replace(/^\//, '')}`);
+    if (exactMatch) {
+      const idx = routesWithoutPrefix.indexOf(exactMatch);
+      return this.routes[idx];
+    }
 
     const prefixMatch = routesWithoutPrefix.find((route) => {
       if (route.method !== 'ALL' && route.method !== normalizedMethod) return false;
@@ -52,7 +55,8 @@ export class RouterService {
     });
 
     if (prefixMatch) {
-      return this.routes.find(r => r.path === `/${prefixMatch.path.replace(/^\//, '')}`);
+      const idx = routesWithoutPrefix.indexOf(prefixMatch);
+      return this.routes[idx];
     }
 
     return undefined;
