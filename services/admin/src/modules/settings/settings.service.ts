@@ -4,11 +4,11 @@ import { dashboardService } from '../dashboard/dashboard.service';
 import type { SettingInput, SettingQueryInput } from './settings.types';
 
 export class SettingsService {
-  async findAll(query: SettingQueryInput, adminId: string) {
+  async findAll(query: SettingQueryInput, _adminId: string) {
     return settingsRepository.findAll(query.category);
   }
 
-  async findByKey(key: string, adminId: string) {
+  async findByKey(key: string, _adminId: string) {
     const setting = await settingsRepository.findByKey(key);
     if (!setting) {
       throw new NotFoundError('Setting');

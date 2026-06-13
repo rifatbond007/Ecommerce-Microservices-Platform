@@ -4,50 +4,58 @@ import { cartApi } from '@/lib/api';
 
 interface CartItem {
   id: string;
+  cartId: string;
   productId: string;
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    images: string[];
-  };
-  variantId?: string;
   quantity: number;
-  price: number;
+  unitPrice: number;
+  totalPrice: number;
+  product?: { id: string; name: string; price: number; images: string[] };
 }
 
 interface CartState {
+  cartId: string | null;
   items: CartItem[];
   isLoading: boolean;
   fetchCart: () => Promise<void>;
-  addItem: (productId: string, quantity: number, variantId?: string) => Promise<void>;
+  initCart: () => Promise<string>;
+  addItem: (productId: string, quantity: number, variantId?: string, unitPrice?: number) => Promise<void>;
   updateItem: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
-  checkout: () => Promise<{ orderId: string }>;
   getTotal: () => number;
 }
 
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
+      cartId: null,
       items: [],
       isLoading: false,
 
       fetchCart: async () => {
         set({ isLoading: true });
         try {
-          const { data } = await cartApi.getCart();
-          set({ items: data.items || [], isLoading: false });
+          const data: any = await cartApi.getCart();
+          set({ cartId: data.id, items: data.items || [], isLoading: false });
         } catch {
           set({ isLoading: false });
         }
       },
 
-      addItem: async (productId, quantity, variantId) => {
+      initCart: async () => {
+        const data: any = await cartApi.initCart();
+        set({ cartId: data.id, items: data.items || [] });
+        return data.id;
+      },
+
+      addItem: async (productId, quantity, variantId, unitPrice) => {
         set({ isLoading: true });
         try {
-          await cartApi.addItem({ productId, quantity, variantId });
+          let cartId = get().cartId;
+          if (!cartId) {
+            cartId = await get().initCart();
+          }
+          await cartApi.addItem({ cartId, productId, quantity, variantId, unitPrice });
           await get().fetchCart();
         } catch (error) {
           set({ isLoading: false });
@@ -58,7 +66,9 @@ export const useCartStore = create<CartState>()(
       updateItem: async (itemId, quantity) => {
         set({ isLoading: true });
         try {
-          await cartApi.updateItem(itemId, { quantity });
+          const cartId = get().cartId;
+          if (!cartId) throw new Error('No cart');
+          await cartApi.updateItem(cartId, itemId, { quantity });
           await get().fetchCart();
         } catch (error) {
           set({ isLoading: false });
@@ -69,7 +79,9 @@ export const useCartStore = create<CartState>()(
       removeItem: async (itemId) => {
         set({ isLoading: true });
         try {
-          await cartApi.removeItem(itemId);
+          const cartId = get().cartId;
+          if (!cartId) throw new Error('No cart');
+          await cartApi.removeItem(cartId, itemId);
           await get().fetchCart();
         } catch (error) {
           set({ isLoading: false });
@@ -79,32 +91,23 @@ export const useCartStore = create<CartState>()(
 
       clearCart: async () => {
         try {
-          await cartApi.clearCart();
-          set({ items: [] });
+          const cartId = get().cartId;
+          if (cartId) {
+            await cartApi.clearCart(cartId);
+          }
+          set({ items: [], cartId: null });
         } catch (error) {
-          throw error;
-        }
-      },
-
-      checkout: async () => {
-        set({ isLoading: true });
-        try {
-          const { data } = await cartApi.checkout();
-          set({ items: [], isLoading: false });
-          return data;
-        } catch (error) {
-          set({ isLoading: false });
           throw error;
         }
       },
 
       getTotal: () => {
-        return get().items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        return get().items.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
       },
     }),
     {
       name: 'cart-storage',
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ cartId: state.cartId, items: state.items }),
     }
   )
 );

@@ -15,7 +15,7 @@ export interface AuthRequest extends Request {
   user?: AuthUser;
 }
 
-export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticate = async (req: AuthRequest, _res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     const userId = req.headers['x-user-id'];
@@ -53,14 +53,14 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
   }
 };
 
-export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const requireAdmin = (req: AuthRequest, _res: Response, next: NextFunction) => {
   if (!req.user || req.user.role !== 'admin') {
     return next(new ForbiddenError('Admin access required'));
   }
   next();
 };
 
-export const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const requireSuperAdmin = (req: AuthRequest, _res: Response, next: NextFunction) => {
   if (!req.user || req.user.role !== 'super_admin') {
     return next(new ForbiddenError('Super admin access required'));
   }

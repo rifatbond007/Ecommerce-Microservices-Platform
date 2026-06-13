@@ -169,7 +169,7 @@ export class AuthController {
     }
   }
 
-  async getSellerRequests(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async getSellerRequests(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const requests = await authService.getSellerRequests();
 

@@ -6,8 +6,6 @@ import { logger } from '../../utils/logger';
 import type { CreateOrderInput, UpdateOrderStatusInput, CreateReturnInput } from './orders.types';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-const FULFILLMENT_STATUSES = ['unfulfilled', 'partial', 'fulfilled'];
-const FINANCIAL_STATUSES = ['pending', 'paid', 'failed', 'refunded', 'partially_refunded'];
 
 export class OrdersService {
   private generateOrderNumber(): string {
