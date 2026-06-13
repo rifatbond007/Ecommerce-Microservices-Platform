@@ -6,7 +6,7 @@ SHELL   := /bin/bash
 
 .PHONY: help infra-up infra-down infra-status dev dev-all dev-% \
         test test-% lint lint-% build build-% install-% stop clean \
-        setup setup-% docker-build docker-build-all docker-build-% \
+        setup setup-% docker-build-all docker-build-% \
         docker-build-frontend docker-up docker-down
 
 help: ## Show available targets
@@ -39,10 +39,9 @@ infra-status: ## Show Docker infra container status
 dev-all: ## Start all services concurrently
 	npm run dev:all
 
-dev-%: ## Start one service (e.g., make dev-auth)
+dev-%: ## Start one service (e.g., make dev-auth, make dev-frontend)
 	$(eval _svc := $(subst dev-,,$@))
-	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
-	npm run dev:$(_svc)
+	@$(if $(filter $(_svc),frontend),cd $(FRONTEND_DIR) && npm run dev,$(if $(filter $(_svc),$(SERVICES)),npm run dev:$(_svc),echo "Unknown: $(_svc). Valid: $(SERVICES) frontend" && exit 1))
 
 # ── Setup & Install ──────────────────────────────────────────────
 
@@ -78,7 +77,7 @@ test-%: ## Test one service (e.g., make test-auth)
 
 # ── Lint ─────────────────────────────────────────────────────────
 
-lint: ## Run all service tests (via npm workspaces)
+lint: ## Lint all services (via npm workspaces)
 	npm run lint --workspaces --if-present
 
 lint-%: ## Lint one service (e.g., make lint-auth)
@@ -109,14 +108,6 @@ docker-build-all: ## Build Docker images for all services + frontend. Override t
 	echo "=== Building ecommerce/frontend:$(DOCKER_TAG) ==="; \
 	docker build -t ecommerce/frontend:$(DOCKER_TAG) $(FRONTEND_DIR); \
 	echo "All images built."
-
-docker-build: ## Build Docker images for all backend services (sequential). Override tag: DOCKER_TAG=v1.0
-	@set -e; \
-	for svc in $(SERVICES); do \
-		echo "=== Building ecommerce/$$svc:$(DOCKER_TAG) ==="; \
-		docker build -t ecommerce/$$svc:$(DOCKER_TAG) services/$$svc; \
-	done; \
-	echo "All backend images built."
 
 docker-build-%: ## Build one service Docker image (e.g., make docker-build-auth)
 	$(eval _svc := $(subst docker-build-,,$@))
