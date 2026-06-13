@@ -1,19 +1,31 @@
 x-common-env: &common-env
   NODE_ENV: production
   JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-too}
   JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+  JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
   RATE_LIMIT_WINDOW_MS: 900000
   RATE_LIMIT_MAX_REQUESTS: 100
   LOG_LEVEL: info
+  ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+  FRONTEND_URL: http://localhost:5173
 
 x-redis-env: &redis-env
   REDIS_URL: redis://redis:6379
 
 x-rabbitmq-env: &rabbitmq-env
-  RABBITMQ_HOST: rabbitmq
-  RABBITMQ_PORT: 5672
-  RABBITMQ_USER: guest
-  RABBITMQ_PASS: guest
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+
+x-service-urls: &service-urls
+  AUTH_SERVICE_URL: http://auth:3001
+  USER_SERVICE_URL: http://user:3002
+  PRODUCT_SERVICE_URL: http://product:3003
+  CART_SERVICE_URL: http://cart:3004
+  ORDER_SERVICE_URL: http://order:3005
+  PAYMENT_SERVICE_URL: http://payment:3006
+  NOTIFICATION_SERVICE_URL: http://notification:3007
+  SEARCH_SERVICE_URL: http://search:3008
+  ADMIN_SERVICE_URL: http://admin:3009
 
 services:
   # ── Infrastructure ──────────────────────────────────────────
@@ -75,7 +87,6 @@ services:
       - ecommerce-network
 
   # ── Services ────────────────────────────────────────────────
-
   gateway:
     build:
       context: ../services/gateway
@@ -84,20 +95,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      <<: [*common-env, *redis-env]
+      <<: [*common-env, *redis-env, *service-urls]
       PORT: 3000
       SERVICE_NAME: api-gateway
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-too}
-      AUTH_SERVICE_URL: http://auth:3001
-      USER_SERVICE_URL: http://user:3002
-      PRODUCT_SERVICE_URL: http://product:3003
-      CART_SERVICE_URL: http://cart:3004
-      ORDER_SERVICE_URL: http://order:3005
-      PAYMENT_SERVICE_URL: http://payment:3006
-      NOTIFICATION_SERVICE_URL: http://notification:3007
-      SEARCH_SERVICE_URL: http://search:3008
-      ADMIN_SERVICE_URL: http://admin:3009
-      FRONTEND_URL: http://localhost:5173
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -116,9 +119,6 @@ services:
       PORT: 3001
       SERVICE_NAME: auth-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=auth
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-too}
-      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -133,7 +133,7 @@ services:
     ports:
       - "3002:3002"
     environment:
-      <<: [*common-env, *redis-env, *rabbitmq-env]
+      <<: [*common-env, *redis-env, *rabbitmq-env, *service-urls]
       PORT: 3002
       SERVICE_NAME: user-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=user_service
@@ -152,7 +152,7 @@ services:
     ports:
       - "3003:3003"
     environment:
-      <<: [*common-env, *redis-env, *rabbitmq-env]
+      <<: [*common-env, *redis-env, *rabbitmq-env, *service-urls]
       PORT: 3003
       SERVICE_NAME: product-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=product_service
@@ -171,7 +171,7 @@ services:
     ports:
       - "3004:3004"
     environment:
-      <<: [*common-env, *redis-env]
+      <<: [*common-env, *redis-env, *service-urls]
       PORT: 3004
       SERVICE_NAME: cart-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=cart_service
@@ -189,7 +189,7 @@ services:
     ports:
       - "3005:3005"
     environment:
-      <<: [*common-env, *redis-env, *rabbitmq-env]
+      <<: [*common-env, *redis-env, *rabbitmq-env, *service-urls]
       PORT: 3005
       SERVICE_NAME: order-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=order_schema
@@ -208,10 +208,13 @@ services:
     ports:
       - "3006:3006"
     environment:
-      <<: [*common-env, *rabbitmq-env]
+      <<: [*common-env, *rabbitmq-env, *service-urls]
       PORT: 3006
       SERVICE_NAME: payment-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=payment_service
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
@@ -226,10 +229,16 @@ services:
     ports:
       - "3007:3007"
     environment:
-      <<: [*common-env, *rabbitmq-env]
+      <<: [*common-env, *rabbitmq-env, *service-urls]
       PORT: 3007
       SERVICE_NAME: notification-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=notification_service
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@ecommerce.local}
+      APP_URL: ${APP_URL:-http://localhost:3000}
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
@@ -244,7 +253,7 @@ services:
     ports:
       - "3008:3008"
     environment:
-      <<: [*common-env, *rabbitmq-env]
+      <<: [*common-env, *rabbitmq-env, *service-urls]
       PORT: 3008
       SERVICE_NAME: search-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=search_service
@@ -262,7 +271,7 @@ services:
     ports:
       - "3009:3009"
     environment:
-      <<: [*common-env, *redis-env]
+      <<: [*common-env, *redis-env, *service-urls]
       PORT: 3009
       SERVICE_NAME: admin-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=admin_service
