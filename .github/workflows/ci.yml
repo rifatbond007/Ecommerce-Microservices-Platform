@@ -113,7 +113,6 @@ jobs:
     name: API Tests
     runs-on: ubuntu-22.04
     needs: [typecheck, test]
-    if: github.event_name == 'workflow_dispatch'
     services:
       postgres:
         image: postgres:16-alpine
