@@ -1,0 +1,173 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint --workspaces
+
+  typecheck:
+    name: TypeCheck
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Build (typecheck) all services
+        run: npm run build --workspaces
+
+  test:
+    name: Test
+    runs-on: ubuntu-22.04
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecommerce
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Init database schemas
+        run: PGPASSWORD=postgres psql -h localhost -U postgres -d ecommerce -f infra/postgres/init-scripts/init-schemas.sql
+        env:
+          PGPASSWORD: postgres
+
+      - name: Generate Prisma clients
+        run: npm run prisma:generate --workspaces
+
+      - name: Push Prisma schemas
+        run: |
+          for svc in auth gateway user product cart order payment notification search admin; do
+            echo "=== $svc ==="
+            DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ecommerce?schema=$svc" \
+              npx --prefix services/$svc prisma db push --accept-data-loss 2>&1 | tail -5
+          done
+
+      - name: Run tests
+        run: npm run test --workspaces
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ecommerce
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+
+  frontend:
+    name: Frontend Build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  api-test:
+    name: API Tests
+    runs-on: ubuntu-22.04
+    needs: [typecheck, test]
+    if: github.event_name == 'workflow_dispatch'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecommerce
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        ports:
+          - 5672:5672
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Init DB + Prisma
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d ecommerce -f infra/postgres/init-scripts/init-schemas.sql
+          npm run prisma:generate --workspaces
+          for svc in auth gateway user product cart order payment notification search admin; do
+            echo "=== $svc ==="
+            DATABASE_URL="postgresql://postgres:postgres@localhost:5433/ecommerce?schema=$svc" \
+              npx --prefix services/$svc prisma db push --accept-data-loss 2>&1 | tail -3
+          done
+
+      - name: Start all services
+        run: |
+          for svc in auth user product cart order payment notification search admin gateway; do
+            npm run dev:$svc &
+            sleep 2
+          done
+          sleep 10
+
+      - name: Run API test suite
+        run: bash scripts/api-test.sh
+        env:
+          BASE_URL: http://localhost:3000
