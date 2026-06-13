@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { productApi, cartApi } from '@/lib/api';
+import { productApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
+import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 
 interface Product {
   id: string; name: string; description: string; price: number; comparePrice?: number; images: string[]; category?: { name: string };
@@ -27,7 +27,7 @@ export function ProductDetailPage() {
     if (!isAuthenticated) { navigate('/login'); return; }
     setAdding(true);
     try {
-      await cartApi.addItem({ productId: id!, quantity: qty });
+      await useCartStore.getState().addItem(id!, qty);
       navigate('/cart');
     } catch (e) { console.error(e); setAdding(false); }
   };

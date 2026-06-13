@@ -51,7 +51,7 @@ export class SessionRepository {
         id: uuidv4(),
         userId: data.userId,
         tokenHash: data.tokenHash,
-        deviceInfo: data.deviceInfo ? JSON.stringify(data.deviceInfo) : null,
+        deviceInfo: data.deviceInfo as any,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
         expiresAt: data.expiresAt,

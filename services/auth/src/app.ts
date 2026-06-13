@@ -1,10 +1,8 @@
 import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { config } from './config';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware';
-import { logger } from './utils/logger';
 
 export const createApp = (): Express => {
   const app = express();
@@ -17,7 +15,7 @@ export const createApp = (): Express => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  app.get('/health', (req, res) => {
+  app.get('/health', (_req, res) => {
     res.json({
       success: true,
       message: 'Auth service is healthy',

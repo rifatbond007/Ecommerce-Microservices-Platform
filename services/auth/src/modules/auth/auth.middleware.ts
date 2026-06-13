@@ -8,7 +8,7 @@ export interface AuthenticatedRequest extends Request {
 
 export const authenticate = (
   req: AuthenticatedRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -30,7 +30,7 @@ export const authenticate = (
 
 export const optionalAuth = (
   req: AuthenticatedRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {

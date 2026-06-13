@@ -5,7 +5,6 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
-import { logger } from './utils/logger';
 
 const app = express();
 
@@ -27,7 +26,7 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: config.serviceName });
 });
 

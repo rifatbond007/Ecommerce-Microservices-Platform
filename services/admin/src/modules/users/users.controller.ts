@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { usersService } from './users.service';
 import { validateQuery, validate } from '../../utils/validate';
 import { updateUserSchema, userQuerySchema } from './users.types';

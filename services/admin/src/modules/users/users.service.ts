@@ -3,7 +3,6 @@ import { config } from '../../config';
 import { NotFoundError } from '../../utils/errors';
 import { dashboardService } from '../dashboard/dashboard.service';
 import type { UpdateUserInput, UserQueryInput } from './users.types';
-import type { AuthRequest } from '../../middleware';
 
 export class UsersService {
   async findAll(query: UserQueryInput, adminId: string, ipAddress?: string) {

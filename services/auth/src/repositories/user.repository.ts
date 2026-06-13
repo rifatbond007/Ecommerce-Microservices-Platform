@@ -1,5 +1,4 @@
 import prisma from './prisma.client';
-import { NotFoundError, ConflictError } from '../utils/errors';
 
 export interface CreateUserData {
   email: string;

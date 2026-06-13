@@ -58,7 +58,7 @@ export class SettingsController {
     }
   }
 
-  async getPublicSettings(req: AuthRequest, res: Response, next: NextFunction) {
+  async getPublicSettings(_req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const result = await settingsService.getPublicSettings();
       

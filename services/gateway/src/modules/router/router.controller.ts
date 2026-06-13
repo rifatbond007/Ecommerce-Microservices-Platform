@@ -39,12 +39,19 @@ export const defaultRoutes: ServiceRoute[] = [
   { path: '/api/v1/auth', method: 'ALL', targetService: 'auth', authRequired: false },
   { path: '/api/v1/users', method: 'ALL', targetService: 'user', authRequired: true },
   { path: '/api/v1/products', method: 'ALL', targetService: 'product', authRequired: false },
-  { path: '/api/v1/cart', method: 'ALL', targetService: 'cart', authRequired: true },
+  { path: '/api/v1/categories', method: 'ALL', targetService: 'product', authRequired: false },
+  { path: '/api/v1/brands', method: 'ALL', targetService: 'product', authRequired: false },
+  { path: '/api/v1/variants', method: 'ALL', targetService: 'product', authRequired: false },
+  { path: '/api/v1/inventory', method: 'ALL', targetService: 'product', authRequired: false },
+  { path: '/api/v1/carts', method: 'ALL', targetService: 'cart', authRequired: true },
   { path: '/api/v1/orders', method: 'ALL', targetService: 'order', authRequired: true },
   { path: '/api/v1/payments', method: 'ALL', targetService: 'payment', authRequired: true },
   { path: '/api/v1/notifications', method: 'ALL', targetService: 'notification', authRequired: true },
   { path: '/api/v1/search', method: 'ALL', targetService: 'search', authRequired: false },
+  { path: '/api/v1/saved-carts', method: 'ALL', targetService: 'cart', authRequired: true },
   { path: '/api/v1/admin', method: 'ALL', targetService: 'admin', authRequired: true },
+  { path: '/api/v1/sellers', method: 'ALL', targetService: 'user', authRequired: true },
+  { path: '/api/v1/seller', method: 'ALL', targetService: 'user', authRequired: true },
 ];
 
 export const getTargetUrl = (serviceName: keyof typeof config.services): string => {

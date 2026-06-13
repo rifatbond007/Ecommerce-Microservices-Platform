@@ -1,146 +1,63 @@
 # AGENTS.md — E-Commerce Microservices
 
----
+## Commands (service dir: `services/<name>/`)
 
-## Key Commands
-
-Run from service directory (`services/<name>/`):
 ```
-npm run dev              # ts-node-dev hot-reload
-npm run build            # tsc → dist/ (also serves as type-check)
-npm run test             # Jest (all tests)
-npm run test:watch       # Jest --watch
-npm run test:coverage    # Jest --coverage
-npm run test -- --testPathPattern="auth.service.test.ts"  # single file
-npm run test -- --testNamePattern="should authenticate"   # single test
-npm run lint             # ESLint
-npm run lint:fix         # ESLint --fix
-npm run prisma:generate  # generate Prisma client
-npm run prisma:migrate   # run migrations
-npm run prisma:push      # push schema without migration
+npm run dev|build|test|test:watch|test:coverage|lint|lint:fix|prisma:generate|prisma:migrate|prisma:push
 ```
 
-Root workspace shortcuts:
-```
-npm run dev:auth  npm run dev:gateway  npm run dev:user  npm run dev:product
-npm run dev:cart  npm run dev:order    npm run dev:payment  npm run dev:notification
-npm run dev:search  npm run dev:admin
-npm run dev:all     # start all 10 concurrently
-npm run build       # all workspaces
-npm run test        # all workspaces
-npm run lint        # all workspaces
-```
+Root: `npm run dev:<name>` (auth, gateway, user, product, cart, order, payment, notification, search, admin) or `dev:all`. `npm run build|test|lint` runs all workspaces.
 
-Makefile (root):
-```
-make infra-up       # docker-compose up + health checks
-make infra-down     # docker-compose down
-make dev-auth       # start one service (npm)
-make dev-all        # start all services (npm)
-make test           # test all services
-make test-auth      # test one service
-make setup          # install + prisma generate + db push for all
-make stop           # kill service processes
-make clean          # stop services + infra-down
-make docker-build   # build all 10 Docker images
-make docker-up      # docker compose up (full stack)
-make docker-down    # docker compose down
-```
-- Compose file: `infra/docker-compose.yml` (defines postgres, redis, rabbitmq + all 10 services)
-- Each service has a `Dockerfile` + `.dockerignore` (multi-stage build)
-- Build individual: `docker build -t ecommerce/auth:latest services/auth`
-- Docker infra creds: postgres/postgres, rabbitmq guest/guest. Update `.env` files from `.env.example` with real credentials.
-
----
+Makefile: `make infra-up|down|setup|stop|clean|docker-build|docker-up|docker-down|test-<name>`.
 
 ## Architecture
 
-10 Express.js microservices behind an API Gateway (workspaces: `services/*`, `packages/*` — no packages/ directory exists yet):
+10 Express microservices behind API Gateway, shared PostgreSQL via schemas, Redis, RabbitMQ.
 
-| Service | Port | Schema | Auth |
-|---------|------|--------|------|
-| gateway | 3000 | gateway | - |
-| auth | 3001 | auth | No |
-| user | 3002 | user_service | Yes |
-| product | 3003 | product_service | No |
-| cart | 3004 | cart_service | Yes |
-| order | 3005 | order_schema | Yes |
-| payment | 3006 | payment_service | Yes |
-| notification | 3007 | notification_service | Yes |
-| search | 3008 | search_service | No |
-| admin | 3009 | admin_service | Yes |
+| Service | Port | Schema | Auth | tsconfig.test.json |
+|---------|------|--------|------|-------------------|
+| gateway | 3000 | gateway | - | **MISSING** — strict:false, tests/ empty, passWithNoTests:true |
+| auth | 3001 | auth | No | ✅ (but compiled .js artifacts in tests/) |
+| user | 3002 | user_service | Yes | ✅ |
+| product | 3003 | product_service | No | **MISSING** |
+| cart | 3004 | cart_service | Yes | ✅ (empty src/controllers/ dir — dead path) |
+| order | 3005 | order_schema | Yes | **MISSING** |
+| payment | 3006 | payment_service | Yes | ✅ |
+| notification | 3007 | notification_service | Yes | ✅ |
+| search | 3008 | search_service | No | ✅ (only service with working RabbitMQ consumer in events/) |
+| admin | 3009 | admin_service | Yes | **MISSING** |
 
-- All services share one PostgreSQL via **separate schemas** (`auth`, `user_service`, etc.)
-- Init schemas in `infra/postgres/init-scripts/init-schemas.sql`
-- Redis for caching/sessions, RabbitMQ for async events
-- JWT access tokens (15m) + refresh tokens (7d) via `Authorization: Bearer <token>`
-
----
-
-## Per-Service Structure
-
-Each service follows the modular pattern:
+## Module Pattern
 
 ```
-src/
-├── index.ts                 # entry point
-├── app.ts                   # Express app setup
-├── config/
-├── modules/<feature>/       # self-contained feature modules
-│   ├── <feature>.controller.ts
-│   ├── <feature>.service.ts
-│   ├── <feature>.route.ts
-│   ├── <feature>.validator.ts  # Zod schemas
-│   ├── <feature>.middleware.ts
-│   ├── <feature>.types.ts
-│   └── index.ts
-├── middleware/               # shared middleware
-├── repositories/             # data access layer
-├── routes/                   # main router
-├── utils/                    # logger, errors, jwt, validate, email
-└── (gateway also has src/shared/)
+src/{index.ts,app.ts,config/,routes/,middleware/,repositories/,utils/,modules/<feature>/{controller,service,route,validator,types,index}.ts}
 tests/
 prisma/schema.prisma
 ```
 
-**Import alias**: `@/*` maps to `src/` via tsconfig paths and jest `moduleNameMapper`.
+Gateway also has `src/shared/redis/` + `src/shared/prisma/`. Missing tsconfig.test.json for product, order, admin, gateway.
 
-**Error response format**:
-```typescript
-{ success: false, error: { code: 'VALIDATION_ERROR', message: '...', details?: ... } }
-```
-Error classes extend `AppError(statusCode, errorCode, message)`.
-
----
-
-## Frontend (React + Vite)
-
-```
-frontend/
-├── src/
-│   ├── app/         pages + layouts + routes (react-router-dom)
-│   ├── components/  shadcn/ui (Radix primitives), feature components
-│   ├── store/       Zustand stores
-│   ├── lib/         API client (axios), utils
-│   └── styles/      globals.css (Tailwind)
-├── vite.config.ts   proxy /api → localhost:3000
-└── tailwind.config.js
-```
-
-Stack: React 18, Vite 5, react-router-dom, Zustand, Tailwind CSS, shadcn/ui (Radix), Axios.
-
-```bash
-cd frontend && npm run dev   # localhost:5173
-```
-
-Note: `npm run build` runs `tsc && vite build` — pre-existing TS errors may cause it to fail. Dev mode (Vite esbuild transpilation) works fine.
-
----
+**Import alias**: `@/*` → `src/` (some services like auth define per-path aliases in tsconfig).
+**Error format**: `{ success: false, error: { code, message, details? } }` using `AppError(status, code, msg)`.
 
 ## Tests
 
-- Jest + ts-jest, `tests/` directory, `**/*.test.ts` pattern
-- Mocks are inline per test file (manual `jest.mock()` calls)
-- Root `npm run test` runs all workspaces (services)
-- No integration test prerequisites beyond infra being up
-- Each service has `tsconfig.test.json` (extends `tsconfig.json` with `strict: false`) — it's what jest configs reference via `ts-jest`
+- Jest + ts-jest, `tests/` dir, `**/*.test.ts` pattern
+- Inline `jest.mock()` at module level, dynamic `await import()` inside `it()` blocks
+- All jest configs set `isolatedModules: true`
+- All tsconfig.test.json extend `tsconfig.json` with `strict: false`
+
+## Frontend
+
+```
+frontend/  (Vite+React, NOT Next.js despite what docs/ say)
+```
+React 18, Vite 5, react-router-dom, Zustand, Tailwind, shadcn/ui, Axios. `vite.config.ts` proxies `/api` → `localhost:3000`. `npm run dev` on `:5173`.
+
+## RabbitMQ
+
+Only `search` has actual consumer (`events/rabbitmq.service.ts` — wired in `app.ts`). `product` and `order` have `amqplib` dep + config but **no publish/consume code**.
+
+## Docs Caveat
+
+`docs/` folder (9 files, ~5000 lines) is **aspirational**. References non-existent `packages/`, Next.js (wrong), wrong creds (`ecommerce/ecommerce_dev_password` — actual: `postgres/postgres`), wrong container naming (underscores vs hyphens). Use code as source of truth.

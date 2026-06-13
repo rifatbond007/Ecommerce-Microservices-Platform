@@ -6,7 +6,7 @@ export const errorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
@@ -14,7 +14,7 @@ export const errorHandler = (
       error: {
         code: err.errorCode,
         message: err.message,
-        ...(err.details && { details: err.details }),
+        ...((err as any).details && { details: (err as any).details }),
       },
     });
   }
