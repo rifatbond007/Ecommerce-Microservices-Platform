@@ -2,7 +2,7 @@
   "name": "cart-service",
   "version": "1.0.0",
   "description": "Cart microservice for e-commerce platform",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
