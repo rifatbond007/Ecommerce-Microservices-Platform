@@ -80,10 +80,12 @@ jobs:
 
       - name: Push Prisma schemas
         run: |
-          for svc in auth gateway user product cart order payment notification search admin; do
-            echo "=== $svc ==="
-            DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ecommerce?schema=$svc" \
-              npx --prefix services/$svc prisma db push --accept-data-loss 2>&1 | tail -5
+          for pair in auth=auth gateway=gateway user=user_service product=product_service cart=cart_service order=order_schema payment=payment_service notification=notification_service search=search_service admin=admin_service; do
+            name="${pair%%=*}"
+            schema="${pair#*=}"
+            echo "=== $name (schema: $schema) ==="
+            DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ecommerce?schema=$schema" \
+              npx --prefix services/$name prisma db push --accept-data-loss 2>&1 | tail -5
           done
 
       - name: Run tests
@@ -150,17 +152,33 @@ jobs:
 
       - name: Init DB + Prisma
         run: |
-          PGPASSWORD=postgres psql -h localhost -U postgres -d ecommerce -f infra/postgres/init-scripts/init-schemas.sql
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d ecommerce -f infra/postgres/init-scripts/init-schemas.sql
           npm run prisma:generate --workspaces
-          for svc in auth gateway user product cart order payment notification search admin; do
-            echo "=== $svc ==="
-            DATABASE_URL="postgresql://postgres:postgres@localhost:5433/ecommerce?schema=$svc" \
-              npx --prefix services/$svc prisma db push --accept-data-loss 2>&1 | tail -3
+          for pair in auth=auth gateway=gateway user=user_service product=product_service cart=cart_service order=order_schema payment=payment_service notification=notification_service search=search_service admin=admin_service; do
+            name="${pair%%=*}"
+            schema="${pair#*=}"
+            echo "=== $name (schema: $schema) ==="
+            DATABASE_URL="postgresql://postgres:postgres@localhost:5433/ecommerce?schema=$schema" \
+              npx --prefix services/$name prisma db push --accept-data-loss 2>&1 | tail -3
           done
 
       - name: Start all services
         run: |
-          for svc in auth user product cart order payment notification search admin gateway; do
+          for svc in auth gateway user product cart order payment notification search admin; do
+            case $svc in
+              auth) schema=auth;;
+              gateway) schema=gateway;;
+              user) schema=user_service;;
+              product) schema=product_service;;
+              cart) schema=cart_service;;
+              order) schema=order_schema;;
+              payment) schema=payment_service;;
+              notification) schema=notification_service;;
+              search) schema=search_service;;
+              admin) schema=admin_service;;
+            esac
+            DATABASE_URL="postgresql://postgres:postgres@localhost:5433/ecommerce?schema=$schema" \
+            REDIS_URL="redis://localhost:6379" \
             npm run dev:$svc &
             sleep 2
           done
