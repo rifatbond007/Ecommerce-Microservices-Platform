@@ -5,7 +5,7 @@ SHELL   := /bin/bash
 .DEFAULT_GOAL := help
 
 .PHONY: help infra-up infra-down infra-status dev dev-all dev-% \
-        test test-% lint lint-% build build-% install-% stop clean \
+        test test-% api-test lint lint-% build build-% install-% stop clean \
         setup setup-% docker-build-all docker-build-% \
         docker-build-frontend docker-up docker-down
 
@@ -67,10 +67,13 @@ install-%: ## Install deps for one service (e.g., make install-auth)
 
 # ── Test ─────────────────────────────────────────────────────────
 
-test: ## Run all service tests (via npm workspaces)
+test: ## Run all service unit tests (via npm workspaces)
 	npm run test --workspaces --if-present
 
 test-%: ## Test one service (e.g., make test-auth)
+
+api-test: ## Test all live API endpoints through the gateway (requires infra + services up)
+	bash scripts/api-test.sh
 	$(eval _svc := $(subst test-,,$@))
 	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
 	npm run test --workspace=services/$(_svc)
