@@ -1,227 +1,267 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Users, Package, ShoppingCart, DollarSign, Activity } from 'lucide-react';
+import {
+  Users, Package, ShoppingCart, DollarSign, Activity,
+  ArrowRight, UserPlus, Box,
+} from 'lucide-react';
 
-interface Stats {
-  totalUsers: number;
-  totalProducts: number;
-  totalOrders: number;
-  totalRevenue: number;
+interface StatsData {
+  users: { total: number; new: number };
+  products: { total: number; new: number };
+  orders: { total: number; revenue: number };
+  recentActivity: ActivityItem[];
 }
 
-interface SalePoint {
-  date: string;
-  amount: number;
+interface ActivityItem {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  userId?: string;
+  details?: string;
+  createdAt: string;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: { type: 'spring' as const, stiffness: 260, damping: 20 },
-  },
-};
-
-const chartVariants = {
-  hidden: { scaleY: 0, opacity: 0 },
-  visible: (i: number) => ({
-    scaleY: 1,
-    opacity: 1,
-    transition: {
-      delay: i * 0.03,
-      type: 'spring' as const,
-      stiffness: 200,
-      damping: 18,
-    },
-  }),
-};
+const navLinks = [
+  { label: 'Dashboard', path: '/admin', icon: Activity },
+  { label: 'Users', path: '/admin/users', icon: Users },
+  { label: 'Products', path: '/admin/products', icon: Package },
+  { label: 'Orders', path: '/admin/orders', icon: ShoppingCart },
+];
 
 const statCards = [
   {
-    label: 'Total Users',
-    icon: Users,
-    value: (s: Stats) => s.totalUsers,
-    gradient: 'from-indigo-500 to-blue-600',
+    label: 'Total Users', icon: Users,
+    value: (s: StatsData) => s.users.total,
+    sub: (s: StatsData) => `+${s.users.new} this period`,
   },
   {
-    label: 'Total Products',
-    icon: Package,
-    value: (s: Stats) => s.totalProducts,
-    gradient: 'from-amber-500 to-orange-600',
+    label: 'Total Products', icon: Package,
+    value: (s: StatsData) => s.products.total,
+    sub: (s: StatsData) => `+${s.products.new} this period`,
   },
   {
-    label: 'Total Orders',
-    icon: ShoppingCart,
-    value: (s: Stats) => s.totalOrders,
-    gradient: 'from-violet-500 to-purple-600',
+    label: 'Total Orders', icon: ShoppingCart,
+    value: (s: StatsData) => s.orders.total,
+    sub: (s: StatsData) => `+${s.orders.total} total`,
   },
   {
-    label: 'Total Revenue',
-    icon: DollarSign,
-    value: (s: Stats) => `$${(s.totalRevenue ?? 0).toFixed(2)}`,
-    gradient: 'from-emerald-500 to-teal-600',
+    label: 'Revenue', icon: DollarSign,
+    value: (s: StatsData) => `$${(s.orders.revenue ?? 0).toLocaleString()}`,
+    sub: () => 'Total revenue',
   },
 ];
 
 export function AdminDashboardPage() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [sales, setSales] = useState<SalePoint[]>([]);
+  const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchData = useCallback(async () => {
+  useEffect(() => {
     setLoading(true);
     setError('');
-    try {
-      const [statsRes, salesRes] = await Promise.all([
-        adminApi.getStats(),
-        adminApi.getActivity(),
-      ]);
-      setStats(statsRes.data);
-      setSales(Array.isArray(salesRes.data) ? salesRes.data : []);
-    } catch {
-      setError('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
+    adminApi.getStats()
+      .then(r => setStats(r.data))
+      .catch(() => setError('Failed to load dashboard data'))
+      .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const chartBars = stats ? [
+    { label: 'New Users', value: stats.users.new, icon: UserPlus },
+    { label: 'New Products', value: stats.products.new, icon: Box },
+  ] : [];
+
+  const maxBarValue = Math.max(...chartBars.map(b => b.value), 1);
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Skeleton className="h-9 w-56 mb-6" />
-        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <Skeleton className="h-4 w-20 mb-3" />
-                <Skeleton className="h-8 w-12" />
-              </CardContent>
-            </Card>
-          ))}
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        <div className="flex gap-8">
+          <AdminSidebar current="/admin" />
+          <div className="flex-1 border border-[#e5e5e5] bg-white p-8">
+            <p className="text-xs text-[#666666] uppercase tracking-wider">Loading dashboard...</p>
+          </div>
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-5 w-32 mb-4" />
-            <Skeleton className="h-48 w-full" />
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <p className="text-destructive mb-4">{error}</p>
-        <Button onClick={fetchData} className="rounded-full">Retry</Button>
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        <div className="flex gap-8">
+          <AdminSidebar current="/admin" />
+          <div className="flex-1 border border-[#e5e5e5] bg-white p-8 text-center">
+            <p className="text-xs text-[#666666] mb-4 uppercase tracking-wider">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-xs font-bold uppercase tracking-widest text-[#111111] border border-[#111111] px-4 py-2 hover:bg-[#111111] hover:text-white transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const maxAmount = Math.max(...sales.map((s) => s.amount), 1);
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-12">
+      <div className="flex gap-8">
+        <AdminSidebar current="/admin" />
+
+        <div className="flex-1 min-w-0">
+          <div className="border border-[#e5e5e5] bg-white">
+            <div className="px-8 py-10 border-b border-[#e5e5e5]">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+                Admin Panel
+              </p>
+              <h1 className="mt-3 text-2xl md:text-3xl font-bold text-[#111111]">
+                Dashboard
+              </h1>
+              <p className="mt-2 text-xs text-[#666666] uppercase tracking-wider">
+                Platform overview and analytics
+              </p>
+            </div>
+
+            <div className="px-8 py-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                {statCards.map(card => {
+                  const Icon = card.icon;
+                  return (
+                    <div key={card.label} className="border border-[#e5e5e5] bg-white p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#777777]">
+                          {card.label}
+                        </p>
+                        <Icon className="h-4 w-4 text-[#111111]" />
+                      </div>
+                      <p className="text-2xl font-bold text-[#111111] font-mono">
+                        {stats ? card.value(stats) : 0}
+                      </p>
+                      <p className="mt-1 text-[10px] text-[#666666] uppercase tracking-wider">
+                        {stats ? card.sub(stats) : ''}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mb-10">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+                      This Period
+                    </p>
+                    <h2 className="mt-1 text-sm font-bold text-[#111111] uppercase tracking-wider">
+                      New Entries
+                    </h2>
+                  </div>
+                </div>
+                <div className="flex items-end gap-6 h-40 border-b border-[#e5e5e5] pb-2">
+                  {chartBars.map(bar => {
+                    const heightPct = Math.max((bar.value / maxBarValue) * 100, 4);
+                    return (
+                      <div key={bar.label} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                        <span className="text-xs font-bold text-[#111111] font-mono">
+                          {bar.value}
+                        </span>
+                        <div
+                          className="w-full bg-[#111111] transition-all duration-500 ease-out"
+                          style={{ height: `${heightPct}%` }}
+                        />
+                        <div className="flex items-center gap-1">
+                          <bar.icon className="h-3 w-3 text-[#666666]" />
+                          <span className="text-[10px] text-[#666666] uppercase tracking-wider">
+                            {bar.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+                      Recent
+                    </p>
+                    <h2 className="mt-1 text-sm font-bold text-[#111111] uppercase tracking-wider">
+                      Activity Log
+                    </h2>
+                  </div>
+                </div>
+                {stats?.recentActivity && stats.recentActivity.length > 0 ? (
+                  <div className="border border-[#e5e5e5] divide-y divide-[#e5e5e5]">
+                    {stats.recentActivity.slice(0, 10).map((item) => (
+                      <div key={item.id} className="flex items-center gap-4 px-4 py-3">
+                        <Activity className="h-3 w-3 text-[#666666] shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-[#111111] font-bold uppercase tracking-wider truncate">
+                            {item.action}
+                          </p>
+                          <p className="text-[10px] text-[#666666] uppercase tracking-wider mt-0.5">
+                            {item.entityType}{item.entityId ? ` #${item.entityId.slice(0, 8)}` : ''}
+                          </p>
+                        </div>
+                        <span className="text-[10px] text-[#666666] font-mono shrink-0">
+                          {new Date(item.createdAt).toLocaleDateString('en-US', {
+                            month: 'short', day: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border border-[#e5e5e5] p-6 text-center">
+                    <p className="text-xs text-[#666666] uppercase tracking-wider">No recent activity</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-8 py-4 bg-[#fafafa] border-t border-[#e5e5e5] text-center">
+              <p className="text-xs text-[#777777] uppercase tracking-wider">
+                Market — Admin Dashboard
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminSidebar({ current }: { current: string }) {
+  const navigate = useNavigate();
 
   return (
-    <motion.div
-      className="container mx-auto px-4 py-8"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      <motion.div variants={itemVariants} className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Platform overview and analytics</p>
-        </div>
-        <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm">
-          <Activity className="h-4 w-4" />
-          Live
-        </Badge>
-      </motion.div>
-
-      <motion.div variants={itemVariants} className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.label} className="overflow-hidden border-0 shadow-sm">
-              <CardContent className="p-0">
-                <div className={`bg-gradient-to-br ${card.gradient} p-6`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-white/80">{card.label}</p>
-                    <Icon className="h-5 w-5 text-white/70" />
-                  </div>
-                  <p className="text-3xl font-bold text-white">
-                    {stats ? card.value(stats) : 0}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </motion.div>
-
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-muted-foreground" />
-              Sales Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {sales.length === 0 ? (
-              <div className="text-center py-12">
-                <DollarSign className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No sales data available yet.</p>
-              </div>
-            ) : (
-              <motion.div
-                className="flex items-end gap-2 h-48"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
-                {sales.map((s, i) => (
-                  <motion.div
-                    key={i}
-                    className="flex-1 flex flex-col items-center gap-1 h-full justify-end"
-                    variants={chartVariants}
-                    custom={i}
-                    style={{ originY: 1 }}
-                  >
-                    <div
-                      className="w-full bg-gradient-to-t from-indigo-500 to-blue-400 rounded-t transition-all hover:from-amber-500 hover:to-orange-400"
-                      style={{ height: `${Math.max((s.amount / maxAmount) * 100, 2)}%` }}
-                      title={`$${s.amount.toFixed(2)}`}
-                    />
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      {new Date(s.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </span>
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </motion.div>
+    <nav className="hidden md:flex flex-col w-48 shrink-0 border border-[#e5e5e5] bg-white h-fit">
+      <div className="px-5 py-4 border-b border-[#e5e5e5]">
+        <p className="text-xs font-bold text-[#111111] uppercase tracking-widest">Admin</p>
+      </div>
+      {navLinks.map(link => {
+        const Icon = link.icon;
+        const active = link.path === current;
+        return (
+          <button
+            key={link.label}
+            onClick={() => navigate(link.path)}
+            className={`flex items-center gap-3 px-5 py-3 text-xs font-bold uppercase tracking-wider text-left transition-all duration-200 ${
+              active
+                ? 'bg-[#111111] text-white'
+                : 'text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5]'
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {link.label}
+            {active && <ArrowRight className="h-3 w-3 ml-auto" />}
+          </button>
+        );
+      })}
+    </nav>
   );
 }
