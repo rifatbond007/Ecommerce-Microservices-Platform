@@ -1,126 +1,159 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { userApi } from '@/lib/api';
+import { userApi, productApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Trash2, Heart, ShoppingBag, Star } from 'lucide-react';
+import { Heart, ShoppingBag, Trash2 } from 'lucide-react';
 
-interface WishlistItem { id: string; product: { id: string; name: string; price: number; images: string[] } }
+interface WishlistItemData {
+  id: string;
+  productId: string;
+  variantId: string | null;
+  notes: string | null;
+  priority: number;
+  addedAt: string;
+}
 
-function WishlistSkeleton() {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <Skeleton className="h-9 w-48 mb-8" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map(i => (
-          <Card key={i} className="overflow-hidden">
-            <Skeleton className="aspect-square" />
-            <CardContent className="p-4 space-y-3">
-              <Skeleton className="h-5 w-3/4" />
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-5 w-16" />
-                <Skeleton className="h-9 w-9 rounded-lg" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
+interface ProductData {
+  id: string;
+  name: string;
+  basePrice: string;
+  images: string[];
+  slug: string;
 }
 
 export function WishlistsPage() {
-  const [items, setItems] = useState<WishlistItem[]>([]);
+  const [wishlistId, setWishlistId] = useState<string | null>(null);
+  const [items, setItems] = useState<WishlistItemData[]>([]);
+  const [products, setProducts] = useState<Map<string, ProductData>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  const load = () => userApi.getWishlists().then(r => setItems(r.data.wishlists || r.data || [])).catch(console.error).finally(() => setLoading(false));
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await userApi.getWishlists();
+      const wishlists = Array.isArray(r.data) ? r.data : [];
+      if (wishlists.length > 0) {
+        setWishlistId(wishlists[0].id);
+        const wishlistItems = wishlists[0].items || [];
+        setItems(wishlistItems);
+        const ids = [...new Set<string>(wishlistItems.map((i: WishlistItemData) => i.productId))];
+        const productMap = new Map<string, ProductData>();
+        await Promise.all(ids.map(async (pid) => {
+          try {
+            const pr = await productApi.getProduct(pid);
+            const p = Array.isArray(pr.data) ? pr.data[0] : pr.data;
+            if (p && p.id) productMap.set(pid, p);
+          } catch { /* skip */ }
+        }));
+        setProducts(productMap);
+      }
+    } catch { /* ignore */ }
+    setLoading(false);
+  };
+
   useEffect(() => { load(); }, []);
 
-  const handleRemove = async (productId: string) => { await userApi.removeFromWishlist(productId); load(); };
+  const handleRemove = async (productId: string) => {
+    if (!wishlistId) return;
+    try {
+      await userApi.removeWishlistItem(wishlistId, productId);
+      setItems(prev => prev.filter(i => i.productId !== productId));
+    } catch { /* ignore */ }
+  };
 
-  if (loading) return <WishlistSkeleton />;
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        <div className="border border-[#e5e5e5] bg-white p-8 text-center">
+          <p className="text-xs text-[#666666] uppercase tracking-wider">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="container mx-auto px-4 py-8"
-    >
-      <div className="flex items-center gap-3 mb-8">
-        <Heart className="h-7 w-7 text-primary" />
-        <h1 className="text-3xl font-bold">My Wishlists</h1>
-      </div>
-
-      {items.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-24 text-center"
-        >
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-6">
-            <Heart className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Your wishlist is empty</h3>
-          <p className="text-muted-foreground mb-6 max-w-sm">
-            Save your favorite items and come back to them anytime.
+    <div className="mx-auto max-w-7xl px-4 py-12">
+      <div className="border border-[#e5e5e5] bg-white">
+        <div className="px-8 py-12 border-b border-[#e5e5e5]">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+            Saved Items
           </p>
-          <Link to="/products">
-            <Button size="lg" className="rounded-full gap-2">
-              <ShoppingBag className="h-4 w-4" />
-              Browse Products
-            </Button>
-          </Link>
-        </motion.div>
-      ) : (
-        <AnimatePresence mode="popLayout">
-          <motion.div
-            layout
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            {items.map(item => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.25 }}
-              >
-                <Card className="overflow-hidden group hover:shadow-xl transition-all duration-300">
-                  <Link to={`/products/${item.product.id}`}>
-                    <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                      {item.product.images[0] ? (
-                        <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                      ) : (
-                        <Star className="h-10 w-10 text-muted-foreground" />
-                      )}
-                    </div>
-                  </Link>
-                  <CardContent className="p-4">
-                    <Link to={`/products/${item.product.id}`}>
-                      <h3 className="font-medium truncate group-hover:text-primary transition-colors">{item.product.name}</h3>
+          <h1 className="mt-3 text-2xl md:text-3xl font-bold text-[#111111]">
+            My Wishlist
+          </h1>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="px-8 py-16 text-center">
+            <div className="h-12 w-12 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-center mx-auto mb-6">
+              <Heart className="h-5 w-5 text-[#111111]" />
+            </div>
+            <h3 className="text-sm font-bold text-[#111111] uppercase tracking-wider mb-2">
+              Your wishlist is empty
+            </h3>
+            <p className="text-xs text-[#666666] mb-6">
+              Save your favorite items and come back to them anytime.
+            </p>
+            <Link to="/products">
+              <Button size="sm">
+                <ShoppingBag className="h-3 w-3 mr-1" /> Browse Products
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="px-8 py-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {items.map(item => {
+                const product = products.get(item.productId);
+                return (
+                  <Card key={item.id} className="group">
+                    <Link to={`/products/${item.productId}`}>
+                      <div className="aspect-square bg-[#f5f5f5] overflow-hidden">
+                        {product?.images?.[0] ? (
+                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:opacity-90 transition-opacity duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[#666666] text-xs font-bold uppercase tracking-wider">
+                            No Image
+                          </div>
+                        )}
+                      </div>
                     </Link>
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="font-semibold text-lg">${item.product.price.toFixed(2)}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemove(item.product.id)}
-                        className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-all"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
-        </AnimatePresence>
-      )}
-    </motion.div>
+                    <CardContent className="p-4">
+                      <Link to={`/products/${item.productId}`}>
+                        <h3 className="text-sm font-bold text-[#111111] truncate uppercase tracking-wider">
+                          {product?.name || 'Product'}
+                        </h3>
+                      </Link>
+                      {product?.basePrice && (
+                        <p className="mt-2 text-base font-bold text-[#111111]">
+                          ${parseFloat(product.basePrice).toFixed(2)}
+                        </p>
+                      )}
+                      <div className="mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => handleRemove(item.productId)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" /> Remove
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="px-8 py-4 bg-[#fafafa] border-t border-[#e5e5e5] text-center">
+          <p className="text-xs text-[#777777] uppercase tracking-wider">
+            Market — My Wishlist
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

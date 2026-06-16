@@ -67,8 +67,9 @@ export const userApi = {
   deleteAddress: (id: string) => api.delete(`/users/me/addresses/${id}`),
   setDefaultAddress: (id: string) => api.post(`/users/me/addresses/${id}/default`),
   getWishlists: () => api.get('/users/me/wishlists'),
-  addToWishlist: (productId: string) => api.post('/users/me/wishlists', { productId }),
-  removeFromWishlist: (productId: string) => api.delete(`/users/me/wishlists/${productId}`),
+  createWishlist: (name: string) => api.post('/users/me/wishlists', { name }),
+  addWishlistItem: (wishlistId: string, productId: string) => api.post(`/users/me/wishlists/${wishlistId}/items`, { productId }),
+  removeWishlistItem: (wishlistId: string, productId: string) => api.delete(`/users/me/wishlists/${wishlistId}/items/${productId}`),
   getReviews: (productId: string) => api.get(`/users/me/reviews/product/${productId}`),
   createReview: (data: { productId: string; rating: number; title?: string; comment?: string }) =>
     api.post('/users/me/reviews', data),

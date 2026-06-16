@@ -9,6 +9,7 @@ const router = Router();
 router.get('/', authenticate, savedCartsController.getSavedCarts);
 router.get('/:id', authenticate, validate(savedCartIdSchema), savedCartsController.getSavedCartById);
 router.post('/', authenticate, validate(createSavedCartSchema), savedCartsController.createSavedCart);
+router.post('/:id/restore', authenticate, validate(savedCartIdSchema), savedCartsController.restoreSavedCart);
 router.put('/:id', authenticate, validate(updateSavedCartSchema), savedCartsController.updateSavedCart);
 router.delete('/:id', authenticate, validate(savedCartIdSchema), savedCartsController.deleteSavedCart);
 
