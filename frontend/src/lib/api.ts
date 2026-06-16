@@ -124,6 +124,12 @@ export const paymentApi = {
     api.post(`/payments/${paymentId}/refund`, { reason }),
 };
 
+export const brandApi = {
+  getBrands: (params?: any) => api.get('/brands', { params }),
+  getBrand: (id: string) => api.get(`/brands/${id}`),
+  getBrandBySlug: (slug: string) => api.get(`/brands/slug/${slug}`),
+};
+
 export const searchApi = {
   search: (query: string, params?: any) =>
     api.get('/search/products', { params: { q: query, ...params } }),
