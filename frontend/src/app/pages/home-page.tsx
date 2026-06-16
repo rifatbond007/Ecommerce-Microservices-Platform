@@ -120,7 +120,7 @@ function ProductCard({ product }: { product: Product }) {
           )}
         </div>
       </Link>
-      <CardContent className="p-4">
+      <CardContent className="p-4 pb-5">
         <div className="flex items-center gap-2 text-[10px] text-[#666666] uppercase tracking-wider mb-1">
           {product.brand && <span>{product.brand.name}</span>}
           {product.brand && product.category && <span>·</span>}
@@ -189,11 +189,11 @@ export function HomePage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
+    <div className="mx-auto max-w-7xl px-4 py-12">
       <div className="border border-[#e5e5e5] bg-white">
       {/* ── Hero ── */}
       <section className="border-b border-[#e5e5e5]">
-        <div className="px-6 py-20 md:py-28">
+          <div className="px-8 py-20 md:py-28">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
             Premium E-Commerce
           </p>
@@ -225,7 +225,7 @@ export function HomePage() {
       </section>
 
       {/* ── Features ── */}
-      <section className="px-6 py-16">
+      <section className="px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
           {features.map((f) => (
             <div key={f.title}>
@@ -238,8 +238,8 @@ export function HomePage() {
       </section>
 
       {/* ── Categories ── */}
-      <section className="border-y border-[#e5e5e5]">
-        <div className="px-6 py-16">
+  <section className="border-y border-[#e5e5e5]">
+    <div className="px-8 py-16">
           <div className="flex items-end justify-between mb-10">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
@@ -283,7 +283,7 @@ export function HomePage() {
       </section>
 
       {/* ── Featured Products ── */}
-      <section className="px-6 py-16">
+      <section className="px-8 py-16">
         <div className="flex items-end justify-between mb-10">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
@@ -320,7 +320,7 @@ export function HomePage() {
       {/* ── Brands ── */}
       {!loading && brands.length > 0 && (
         <section className="border-y border-[#e5e5e5]">
-          <div className="px-6 py-16">
+          <div className="px-8 py-16">
             <div className="text-center mb-10">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
                 Trusted Brands
@@ -348,7 +348,7 @@ export function HomePage() {
       )}
 
       {/* ── New Arrivals ── */}
-      <section className="px-6 py-16">
+      <section className="px-8 py-16">
         <div className="flex items-end justify-between mb-10">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
@@ -384,7 +384,7 @@ export function HomePage() {
 
       {/* ── CTA ── */}
       <section className="border-t border-[#e5e5e5]">
-        <div className="px-6 py-16 text-center">
+        <div className="px-8 py-16 text-center">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
             Get Started
           </p>
