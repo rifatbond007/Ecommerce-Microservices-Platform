@@ -47,6 +47,35 @@ const features = [
   { icon: ShoppingBag, title: 'Easy Returns', desc: '30-day return policy' },
 ];
 
+const demoProducts: Product[] = [
+  { id: 'demo-1', name: 'Classic Leather Backpack', basePrice: '89.00', compareAtPrice: '129.00', images: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400'], slug: 'classic-leather-backpack', averageRating: '4.8', reviewCount: 124, totalSold: 320, isFeatured: true, category: { id: 'c1', name: 'Bags', slug: 'bags' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
+  { id: 'demo-2', name: 'Minimalist Watch', basePrice: '245.00', compareAtPrice: null, images: ['https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400'], slug: 'minimalist-watch', averageRating: '4.6', reviewCount: 89, totalSold: 180, isFeatured: true, category: { id: 'c2', name: 'Accessories', slug: 'accessories' }, brand: { id: 'b2', name: 'Nordic', slug: 'nordic' } },
+  { id: 'demo-3', name: 'Wool Blend Sweater', basePrice: '120.00', compareAtPrice: '160.00', images: ['https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=400'], slug: 'wool-blend-sweater', averageRating: '4.7', reviewCount: 56, totalSold: 95, isFeatured: true, category: { id: 'c3', name: 'Clothing', slug: 'clothing' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
+  { id: 'demo-4', name: 'Ceramic Pour-Over Set', basePrice: '55.00', compareAtPrice: null, images: ['https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=400'], slug: 'ceramic-pour-over-set', averageRating: '4.9', reviewCount: 203, totalSold: 510, isFeatured: true, category: { id: 'c4', name: 'Home', slug: 'home' }, brand: { id: 'b3', name: 'Artisan', slug: 'artisan' } },
+  { id: 'demo-5', name: 'Canvas Sneakers', basePrice: '75.00', compareAtPrice: '95.00', images: ['https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400'], slug: 'canvas-sneakers', averageRating: '4.5', reviewCount: 178, totalSold: 420, isFeatured: false, category: { id: 'c3', name: 'Clothing', slug: 'clothing' }, brand: { id: 'b2', name: 'Nordic', slug: 'nordic' } },
+  { id: 'demo-6', name: 'Brass Desk Lamp', basePrice: '95.00', compareAtPrice: null, images: ['https://images.unsplash.com/photo-1507473885765-e6ed057ab6fe?w=400'], slug: 'brass-desk-lamp', averageRating: '4.4', reviewCount: 42, totalSold: 130, isFeatured: false, category: { id: 'c4', name: 'Home', slug: 'home' }, brand: { id: 'b3', name: 'Artisan', slug: 'artisan' } },
+  { id: 'demo-7', name: 'Leather Journal', basePrice: '34.00', compareAtPrice: null, images: ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400'], slug: 'leather-journal', averageRating: '4.3', reviewCount: 67, totalSold: 280, isFeatured: false, category: { id: 'c5', name: 'Stationery', slug: 'stationery' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
+  { id: 'demo-8', name: 'Wireless Headphones', basePrice: '199.00', compareAtPrice: '249.00', images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400'], slug: 'wireless-headphones', averageRating: '4.7', reviewCount: 312, totalSold: 890, isFeatured: false, category: { id: 'c6', name: 'Electronics', slug: 'electronics' }, brand: { id: 'b4', name: 'Pulse', slug: 'pulse' } },
+];
+
+const demoCategories: Category[] = [
+  { id: 'dc1', name: 'Bags', slug: 'bags', description: null, children: [], productCount: 24 },
+  { id: 'dc2', name: 'Accessories', slug: 'accessories', description: null, children: [], productCount: 56 },
+  { id: 'dc3', name: 'Clothing', slug: 'clothing', description: null, children: [], productCount: 89 },
+  { id: 'dc4', name: 'Home', slug: 'home', description: null, children: [], productCount: 42 },
+  { id: 'dc5', name: 'Stationery', slug: 'stationery', description: null, children: [], productCount: 18 },
+  { id: 'dc6', name: 'Electronics', slug: 'electronics', description: null, children: [], productCount: 35 },
+  { id: 'dc7', name: 'Footwear', slug: 'footwear', description: null, children: [], productCount: 31 },
+  { id: 'dc8', name: 'Outdoor', slug: 'outdoor', description: null, children: [], productCount: 27 },
+];
+
+const demoBrands: BrandResponse[] = [
+  { id: 'db1', name: 'Heritage Co.', slug: 'heritage-co', description: 'Timeless craftsmanship since 1985', logoUrl: null, isActive: true },
+  { id: 'db2', name: 'Nordic', slug: 'nordic', description: 'Scandinavian minimalism', logoUrl: null, isActive: true },
+  { id: 'db3', name: 'Artisan', slug: 'artisan', description: 'Handmade with care', logoUrl: null, isActive: true },
+  { id: 'db4', name: 'Pulse', slug: 'pulse', description: 'Modern tech for everyday life', logoUrl: null, isActive: true },
+];
+
 const stats = [
   { icon: Package, value: '10K+', label: 'Products' },
   { icon: Users, value: '50K+', label: 'Happy Customers' },
@@ -139,18 +168,23 @@ export function HomePage() {
 
   useEffect(() => {
     Promise.all([
-      productApi.getFeatured(),
-      productApi.getProducts({ limit: 4 }),
-      productApi.getCategoryTree(),
-      brandApi.getBrands({ limit: 8 }),
+      productApi.getFeatured().catch(() => ({ data: [] })),
+      productApi.getProducts({ limit: 4 }).catch(() => ({ data: [] })),
+      productApi.getCategoryTree().catch(() => ({ data: [] })),
+      brandApi.getBrands({ limit: 8 }).catch(() => ({ data: [] })),
     ])
       .then(([featuredRes, newRes, catRes, brandRes]) => {
-        setFeatured(featuredRes.data ?? []);
-        setNewArrivals(newRes.data ?? []);
-        setCategories(catRes.data ?? []);
-        setBrands(brandRes.data ?? []);
+        setFeatured(featuredRes.data?.length ? featuredRes.data : demoProducts.filter(p => p.isFeatured));
+        setNewArrivals(newRes.data?.length ? newRes.data : demoProducts.filter(p => !p.isFeatured));
+        setCategories(catRes.data?.length ? catRes.data : demoCategories);
+        setBrands(brandRes.data?.length ? brandRes.data : demoBrands);
       })
-      .catch(console.error)
+      .catch(() => {
+        setFeatured(demoProducts.filter(p => p.isFeatured));
+        setNewArrivals(demoProducts.filter(p => !p.isFeatured));
+        setCategories(demoCategories);
+        setBrands(demoBrands);
+      })
       .finally(() => setLoading(false));
   }, []);
 
