@@ -9,7 +9,7 @@ export function StaticPage({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-12">
+    <div className="mx-auto max-w-7xl px-4 py-12">
       <div className="border border-[#e5e5e5] bg-white">
         <div className="px-8 py-16 md:px-16 md:py-20 border-b border-[#e5e5e5]">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
