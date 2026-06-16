@@ -27,6 +27,7 @@ import { NotificationsPage } from './pages/notifications-page';
 import { NotificationPreferencesPage } from './pages/notification-preferences-page';
 import { SavedCartsPage } from './pages/saved-carts-page';
 import { BecomeSellerPage } from './pages/become-seller-page';
+import { StaticPage } from './pages/static/static-page';
 import { SellerDashboardPage } from './pages/seller/seller-dashboard-page';
 import { SellerProductsPage } from './pages/seller/seller-products-page';
 import { AdminDashboardPage } from './pages/admin/admin-dashboard-page';
@@ -109,6 +110,14 @@ export default function App() {
               <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
               <Route path="/admin/products" element={<AdminRoute><AdminProductsPage /></AdminRoute>} />
               <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
+              <Route path="/about" element={<StaticPage slug="about" />} />
+              <Route path="/careers" element={<StaticPage slug="careers" />} />
+              <Route path="/contact" element={<StaticPage slug="contact" />} />
+              <Route path="/help" element={<StaticPage slug="help" />} />
+              <Route path="/shipping" element={<StaticPage slug="shipping" />} />
+              <Route path="/returns" element={<StaticPage slug="returns" />} />
+              <Route path="/privacy" element={<StaticPage slug="privacy" />} />
+              <Route path="/terms" element={<StaticPage slug="terms" />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </PageWrap>
