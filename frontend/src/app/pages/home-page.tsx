@@ -267,13 +267,16 @@ export function HomePage() {
                 <Link
                   key={cat.id}
                   to={`/products?categoryId=${cat.id}`}
-                  className="border border-[#e5e5e5] bg-white p-8 text-center hover:bg-[#fafafa] transition-colors group"
+                  className="relative overflow-hidden border border-[#e5e5e5] bg-white p-8 text-center group"
                 >
-                  <p className="text-sm font-bold text-[#111111] uppercase tracking-wider group-hover:opacity-70 transition-opacity">
+                  <span className="absolute inset-y-0 left-0 bg-[#111111] w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
+                  <span className="relative z-10 text-sm font-bold text-[#111111] uppercase tracking-wider group-hover:text-white transition-colors duration-300">
                     {cat.name}
-                  </p>
+                  </span>
                   {cat.productCount !== undefined && (
-                    <p className="mt-2 text-xs text-[#666666]">{cat.productCount} items</p>
+                    <p className="relative z-10 mt-2 text-xs text-[#666666] group-hover:text-white/70 transition-colors duration-300">
+                      {cat.productCount} items
+                    </p>
                   )}
                 </Link>
               ))}
@@ -332,13 +335,16 @@ export function HomePage() {
                 <Link
                   key={brand.id}
                   to={`/products?brandId=${brand.id}`}
-                  className="border border-[#e5e5e5] bg-white p-6 text-center hover:bg-[#fafafa] transition-colors group"
+                  className="relative overflow-hidden border border-[#e5e5e5] bg-white p-6 text-center group"
                 >
-                  <p className="text-sm font-bold text-[#111111] uppercase tracking-wider group-hover:opacity-70 transition-opacity">
+                  <span className="absolute inset-y-0 left-0 bg-[#111111] w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
+                  <span className="relative z-10 text-sm font-bold text-[#111111] uppercase tracking-wider group-hover:text-white transition-colors duration-300">
                     {brand.name}
-                  </p>
+                  </span>
                   {brand.description && (
-                    <p className="mt-1 text-xs text-[#666666] line-clamp-2">{brand.description}</p>
+                    <p className="relative z-10 mt-1 text-xs text-[#666666] line-clamp-2 group-hover:text-white/70 transition-colors duration-300">
+                      {brand.description}
+                    </p>
                   )}
                 </Link>
               ))}
