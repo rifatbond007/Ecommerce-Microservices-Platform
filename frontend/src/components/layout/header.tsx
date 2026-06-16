@@ -44,7 +44,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#e5e5e5] bg-white">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <Link to="/" className="text-xl font-bold tracking-widest text-[#111111] uppercase">
           Market
         </Link>
@@ -167,7 +167,7 @@ export function Header() {
 
       {mobileMenuOpen && (
         <div className="border-t border-[#e5e5e5] md:hidden">
-          <nav className="mx-auto max-w-5xl flex flex-col px-6 py-4 gap-1">
+          <nav className="mx-auto max-w-7xl flex flex-col px-4 py-4 gap-1">
             {['Products', 'Categories', 'Search'].map((item) => (
               <Link
                 key={item}
@@ -206,7 +206,7 @@ export function Header() {
 
       {searchOpen && (
         <div className="fixed inset-0 z-50 bg-white/95">
-          <div className="mx-auto max-w-2xl px-6 pt-24">
+          <div className="mx-auto max-w-2xl px-4 pt-24">
             <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666666]" />
               <input
