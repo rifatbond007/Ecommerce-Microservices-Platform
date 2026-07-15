@@ -33,8 +33,19 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       - run: npm ci
+
+      # Each service imports Prisma types from a single shared
+      # node_modules/.prisma/client that gets overwritten by the last
+      # service to run `prisma generate`. Build services one at a time
+      # and regenerate the matching client immediately before each build
+      # so TypeScript sees the right schema models and Input types.
       - name: Build (typecheck) all services
-        run: npm run build --workspaces
+        run: |
+          for svc in admin auth cart gateway notification order payment product search user; do
+            echo "=== generate + build $svc ==="
+            (cd services/$svc && npx prisma generate) || exit 1
+            npm run build --workspace=services/$svc || exit 1
+          done
 
   test:
     name: Test

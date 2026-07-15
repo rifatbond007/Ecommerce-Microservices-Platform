@@ -13,22 +13,22 @@ export class SearchLogRepository {
   }
 
   async getTrending(limit = 10) {
-    const rows = await prisma.$queryRawUnsafe<Array<{ query: string; count: bigint }>>(
+    const rows = (await prisma.$queryRawUnsafe(
       `SELECT query, COUNT(*) as count FROM search_logs
        WHERE created_at >= NOW() - INTERVAL '7 days'
        GROUP BY query ORDER BY count DESC LIMIT $1`,
       limit
-    );
-    return rows.map((r) => ({ query: r.query, count: Number(r.count) }));
+    )) as Array<{ query: string; count: bigint }>;
+    return rows.map((r: { query: string; count: bigint }) => ({ query: r.query, count: Number(r.count) }));
   }
 
   async getPopular(limit = 10) {
-    const rows = await prisma.$queryRawUnsafe<Array<{ query: string; count: bigint }>>(
+    const rows = (await prisma.$queryRawUnsafe(
       `SELECT query, COUNT(*) as count FROM search_logs
        GROUP BY query ORDER BY count DESC LIMIT $1`,
       limit
-    );
-    return rows.map((r) => ({ query: r.query, count: Number(r.count) }));
+    )) as Array<{ query: string; count: bigint }>;
+    return rows.map((r: { query: string; count: bigint }) => ({ query: r.query, count: Number(r.count) }));
   }
 
   async click(productId: string, logId?: string) {

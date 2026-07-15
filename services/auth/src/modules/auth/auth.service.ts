@@ -148,7 +148,7 @@ export class AuthService {
       userAgent,
     });
 
-    const roles = user.roles.map((ur) => ur.role.name);
+    const roles = user.roles.map((ur: { role: { name: string } }) => ur.role.name);
     const tokens = await this.generateTokens(user.id, user.email, roles[0] || 'user', ipAddress, userAgent);
 
     logger.info('User logged in', { userId: user.id, email: user.email });
@@ -175,7 +175,7 @@ export class AuthService {
       throw new UnauthorizedError('User not found or inactive');
     }
 
-    const roles = user.roles.map((ur) => ur.role.name);
+    const roles = user.roles.map((ur: { role: { name: string } }) => ur.role.name);
 
     return this.generateTokens(user.id, user.email, roles[0] || 'user');
   }
@@ -271,7 +271,7 @@ export class AuthService {
       throw new NotFoundError('User');
     }
 
-    const roles = user.roles.map((ur) => ur.role.name);
+    const roles = user.roles.map((ur: { role: { name: string } }) => ur.role.name);
     return this.formatUserResponse(user, roles);
   }
 

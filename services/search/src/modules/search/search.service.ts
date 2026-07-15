@@ -48,7 +48,7 @@ export class SearchService {
 
   async getSuggestions(prefix: string, limit = 5): Promise<SearchSuggestionsResponse> {
     const items = await searchIndexRepository.getSuggestions(prefix, limit);
-    return { suggestions: items.map((i) => i.name) };
+    return { suggestions: items.map((i: { name: string }) => i.name) };
   }
 
   async getTrending(limit = 10): Promise<TrendingResponse> {

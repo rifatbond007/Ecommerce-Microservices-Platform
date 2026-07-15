@@ -12,7 +12,7 @@ export class UsersService {
       throw new NotFoundError('User');
     }
 
-    const roles = user.roles.map((ur) => ur.role.name);
+    const roles = user.roles.map((ur: { role: { name: string } }) => ur.role.name);
     return this.formatUserResponse(user, roles);
   }
 
@@ -25,7 +25,7 @@ export class UsersService {
 
     const updatedUser = await userRepository.update(userId, input);
 
-    const roles = user.roles.map((ur) => ur.role.name);
+    const roles = user.roles.map((ur: { role: { name: string } }) => ur.role.name);
 
     logger.info('Profile updated', { userId });
 
