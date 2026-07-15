@@ -8,81 +8,81 @@ datasource db {
 }
 
 model Order {
-  id                  String    @id @default(uuid())
-  orderNumber         String    @unique @map("order_number")
-  userId              String    @map("user_id")
-  cartId              String?   @map("cart_id")
-  status              String    @default("pending")
-  fulfillmentStatus    String    @default("unfulfilled") @map("fulfillment_status")
-  financialStatus     String    @default("pending") @map("financial_status")
-  currency            String    @default("USD")
-  subtotal            Decimal   @db.Decimal(12, 2)
-  taxTotal            Decimal   @default(0) @db.Decimal(12, 2) @map("tax_total")
-  shippingTotal       Decimal   @default(0) @db.Decimal(12, 2) @map("shipping_total")
-  discountTotal       Decimal   @default(0) @db.Decimal(12, 2) @map("discount_total")
-  total               Decimal   @db.Decimal(12, 2)
-  shippingAddressId   String    @map("shipping_address_id")
-  billingAddressId    String    @map("billing_address_id")
-  shippingMethod      String?   @map("shipping_method")
-  shippingTrackingNumber String? @map("shipping_tracking_number")
-  shippingCarrier     String?   @map("shipping_carrier")
-  notes               String?   @db.Text
-  tags               Json      @default("[]")
-  completedAt         DateTime? @map("completed_at")
-  cancelledAt         DateTime? @map("cancelled_at")
-  createdAt          DateTime   @default(now()) @map("created_at")
-  updatedAt          DateTime   @updatedAt @map("updated_at")
+  id                     String    @id @default(uuid())
+  orderNumber            String    @unique @map("order_number")
+  userId                 String    @map("user_id")
+  cartId                 String?   @map("cart_id")
+  status                 String    @default("pending")
+  fulfillmentStatus      String    @default("unfulfilled") @map("fulfillment_status")
+  financialStatus        String    @default("pending") @map("financial_status")
+  currency               String    @default("USD")
+  subtotal               Decimal   @db.Decimal(12, 2)
+  taxTotal               Decimal   @default(0) @map("tax_total") @db.Decimal(12, 2)
+  shippingTotal          Decimal   @default(0) @map("shipping_total") @db.Decimal(12, 2)
+  discountTotal          Decimal   @default(0) @map("discount_total") @db.Decimal(12, 2)
+  total                  Decimal   @db.Decimal(12, 2)
+  shippingAddressId      String    @map("shipping_address_id")
+  billingAddressId       String    @map("billing_address_id")
+  shippingMethod         String?   @map("shipping_method")
+  shippingTrackingNumber String?   @map("shipping_tracking_number")
+  shippingCarrier        String?   @map("shipping_carrier")
+  notes                  String?   @db.Text
+  tags                   Json      @default("[]")
+  completedAt            DateTime? @map("completed_at")
+  cancelledAt            DateTime? @map("cancelled_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
-  items               OrderItem[]
-  statusHistory       OrderStatusHistory[]
-  shipments           Shipment[]
-  refunds             Refund[]
-  returns             Return[]
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+  shipments     Shipment[]
+  refunds       Refund[]
+  returns       Return[]
 
-  @@map("orders")
   @@index([orderNumber])
   @@index([userId])
   @@index([status])
   @@index([fulfillmentStatus])
   @@index([financialStatus])
   @@index([createdAt])
+  @@map("orders")
 }
 
 model OrderItem {
-  id            String   @id @default(uuid())
-  orderId       String   @map("order_id")
-  productId     String   @map("product_id")
-  variantId     String?  @map("variant_id")
-  sku           String
-  name          String
-  quantity      Int
-  unitPrice     Decimal  @db.Decimal(12, 2) @map("unit_price")
-  totalPrice    Decimal  @db.Decimal(12, 2) @map("total_price")
-  taxAmount     Decimal  @default(0) @db.Decimal(12, 2) @map("tax_amount")
-  discountAmount Decimal @default(0) @db.Decimal(12, 2) @map("discount_amount")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid())
+  orderId        String   @map("order_id")
+  productId      String   @map("product_id")
+  variantId      String?  @map("variant_id")
+  sku            String
+  name           String
+  quantity       Int
+  unitPrice      Decimal  @map("unit_price") @db.Decimal(12, 2)
+  totalPrice     Decimal  @map("total_price") @db.Decimal(12, 2)
+  taxAmount      Decimal  @default(0) @map("tax_amount") @db.Decimal(12, 2)
+  discountAmount Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  returns       Return[]
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  returns Return[]
 
-  @@map("order_items")
   @@index([orderId])
   @@index([productId])
+  @@map("order_items")
 }
 
 model OrderStatusHistory {
-  id         String   @id @default(uuid())
-  orderId    String   @map("order_id")
-  status     String
-  newStatus  String   @map("new_status")
-  note       String?  @db.Text
-  changedBy  String?  @map("changed_by")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  status    String
+  newStatus String   @map("new_status")
+  note      String?  @db.Text
+  changedBy String?  @map("changed_by")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  @@map("order_status_history")
   @@index([orderId])
+  @@map("order_status_history")
 }
 
 model Shipment {
@@ -97,47 +97,47 @@ model Shipment {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  @@map("shipments")
   @@index([orderId])
   @@index([trackingNumber])
+  @@map("shipments")
 }
 
 model Refund {
-  id            String    @id @default(uuid())
-  orderId       String    @map("order_id")
-  paymentId     String?   @map("payment_id")
-  amount        Decimal   @db.Decimal(12, 2)
-  reason        String?   @db.Text
-  status        String    @default("pending")
-  processedAt   DateTime? @map("processed_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  orderId     String    @map("order_id")
+  paymentId   String?   @map("payment_id")
+  amount      Decimal   @db.Decimal(12, 2)
+  reason      String?   @db.Text
+  status      String    @default("pending")
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  @@map("refunds")
   @@index([orderId])
   @@index([paymentId])
+  @@map("refunds")
 }
 
 model Return {
-  id            String    @id @default(uuid())
-  orderId       String    @map("order_id")
-  orderItemId   String    @map("order_item_id")
-  quantity      Int
-  reason        String    @db.Text
-  status        String    @default("requested")
-  refundAmount  Decimal?  @db.Decimal(12, 2) @map("refund_amount")
-  resolvedAt    DateTime? @map("resolved_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id           String    @id @default(uuid())
+  orderId      String    @map("order_id")
+  orderItemId  String    @map("order_item_id")
+  quantity     Int
+  reason       String    @db.Text
+  status       String    @default("requested")
+  refundAmount Decimal?  @map("refund_amount") @db.Decimal(12, 2)
+  resolvedAt   DateTime? @map("resolved_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderItem     OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 
-  @@map("returns")
   @@index([orderId])
   @@index([status])
+  @@map("returns")
 }

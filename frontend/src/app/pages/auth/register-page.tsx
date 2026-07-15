@@ -19,7 +19,7 @@ export function RegisterPage() {
       await register(formData);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(err.response?.data?.error?.message || 'Registration failed');
     }
   };
 
@@ -50,13 +50,13 @@ export function RegisterPage() {
                 <label htmlFor="firstName" className="block text-xs font-bold uppercase tracking-wider text-[#111111] mb-2">
                   First Name
                 </label>
-                <Input id="firstName" value={formData.firstName} onChange={(e) => setFormData(s => ({ ...s, firstName: e.target.value }))} placeholder="John" />
+                <Input id="firstName" value={formData.firstName} onChange={(e) => setFormData(s => ({ ...s, firstName: e.target.value }))} required placeholder="John" />
               </div>
               <div>
                 <label htmlFor="lastName" className="block text-xs font-bold uppercase tracking-wider text-[#111111] mb-2">
                   Last Name
                 </label>
-                <Input id="lastName" value={formData.lastName} onChange={(e) => setFormData(s => ({ ...s, lastName: e.target.value }))} placeholder="Doe" />
+                <Input id="lastName" value={formData.lastName} onChange={(e) => setFormData(s => ({ ...s, lastName: e.target.value }))} required placeholder="Doe" />
               </div>
             </div>
             <div>

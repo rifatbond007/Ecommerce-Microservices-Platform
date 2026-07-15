@@ -1,14 +1,15 @@
 import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { config } from './config';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware';
-import { logger } from './utils/logger';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
 
 export const createApp = (): Express => {
   const app = express();
 
+  app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3001',
@@ -17,13 +18,16 @@ export const createApp = (): Express => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  app.get('/health', (req, res) => {
+  app.get('/health', (_req, res) => {
     res.json({
       success: true,
       message: 'User service is healthy',
       timestamp: new Date().toISOString(),
     });
   });
+
+  // @ts-expect-error — swagger-ui-express types lag Express 4.22
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   app.use('/api/v1', routes);
 

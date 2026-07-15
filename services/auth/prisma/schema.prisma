@@ -8,26 +8,26 @@ datasource db {
 }
 
 model User {
-  id                   String      @id @default(uuid()) @db.Uuid
-  email                String      @unique @map("email") @db.VarChar(255)
-  passwordHash         String      @map("password_hash") @db.VarChar(255)
-  username             String      @unique @map("username") @db.VarChar(100)
-  firstName            String      @map("first_name") @db.VarChar(100)
-  lastName             String      @map("last_name") @db.VarChar(100)
-  phone                String?     @map("phone") @db.VarChar(20)
-  avatarUrl            String?     @map("avatar_url") @db.VarChar(500)
-  role                 String      @default("user") @map("role") @db.VarChar(20)
+  id                   String       @id @default(uuid()) @db.Uuid
+  email                String       @unique @map("email") @db.VarChar(255)
+  passwordHash         String       @map("password_hash") @db.VarChar(255)
+  username             String       @unique @map("username") @db.VarChar(100)
+  firstName            String       @map("first_name") @db.VarChar(100)
+  lastName             String       @map("last_name") @db.VarChar(100)
+  phone                String?      @map("phone") @db.VarChar(20)
+  avatarUrl            String?      @map("avatar_url") @db.VarChar(500)
+  role                 String       @default("user") @map("role") @db.VarChar(20)
   sellerStatus         SellerStatus @default(NONE) @map("seller_status")
-  isActive             Boolean     @default(true) @map("is_active")
-  isVerified           Boolean     @default(false) @map("is_verified")
-  verificationToken    String?    @map("verification_token") @db.VarChar(255)
-  resetPasswordToken   String?    @map("reset_password_token") @db.VarChar(255)
-  resetPasswordExpires DateTime?  @map("reset_password_expires")
-  failedLoginAttempts  Int        @default(0) @map("failed_login_attempts")
-  lockedUntil          DateTime?  @map("locked_until")
-  lastLoginAt          DateTime?  @map("last_login_at")
-  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  isActive             Boolean      @default(true) @map("is_active")
+  isVerified           Boolean      @default(false) @map("is_verified")
+  verificationToken    String?      @map("verification_token") @db.VarChar(255)
+  resetPasswordToken   String?      @map("reset_password_token") @db.VarChar(255)
+  resetPasswordExpires DateTime?    @map("reset_password_expires")
+  failedLoginAttempts  Int          @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime?    @map("locked_until")
+  lastLoginAt          DateTime?    @map("last_login_at")
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   sessions             Session[]
   roles                UserRole[]
 

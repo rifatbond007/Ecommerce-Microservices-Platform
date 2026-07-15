@@ -11,9 +11,22 @@ build/
 AGENTS.md
 client.md
 
+# Test outputs / coverage
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+*.tsbuildinfo
+
 # Logs
 *.log
 logs/
+
+# Cache files
+.eslintcache
+.cache/
+.npm/
+.vite/
 
 # IDE
 .vscode/
@@ -26,3 +39,23 @@ Thumbs.db
 # Postman
 postman/product-service.json
 postman/cart-service.json
+
+# Personal puku-cli notes
+PUKU.local.md
+.puku-cli/worktrees/
+
+# Compiled test artifacts (Jest/ts-jest)
+tests/**/*.js
+tests/**/*.js.map
+tests/**/*.d.ts
+tests/**/*.d.ts.map
+
+# DB dumps / backups
+*.dump
+*.sql.gz
+*.tar.gz
+
+# Local keys/certs
+*.pem
+*.key
+*.crt

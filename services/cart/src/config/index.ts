@@ -19,6 +19,19 @@ export const config = {
     secret: process.env.JWT_SECRET || 'your-secret-key',
   },
 
+  rabbitmq: {
+    url: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
+    exchange: process.env.RABBITMQ_EXCHANGE || 'ecommerce.events',
+  },
+
+  tax: {
+    rate: parseFloat(process.env.TAX_RATE || '0.10'),
+  },
+
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  },
+
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),

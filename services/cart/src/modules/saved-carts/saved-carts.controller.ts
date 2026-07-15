@@ -53,7 +53,7 @@ export class SavedCartsController {
       const userId = req.user!.id;
       const { id } = req.params;
       await savedCartsService.deleteSavedCart(id, userId);
-      res.status(204).json({ success: true });
+      res.status(204).send();
     } catch (error) {
       next(error);
     }

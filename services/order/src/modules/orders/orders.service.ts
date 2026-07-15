@@ -63,7 +63,7 @@ export class OrdersService {
       }));
 
       const subtotal = items.reduce((sum: number, item: any) => sum + Number(item.totalPrice), 0);
-      const taxTotal = subtotal * 0.1;
+      const taxTotal = subtotal * config.tax.rate;
       const shippingTotal = input.shippingMethod ? 10 : 0;
       const total = subtotal + taxTotal + shippingTotal;
 

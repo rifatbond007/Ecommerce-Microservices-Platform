@@ -1,524 +1,117 @@
-# Infrastructure Documentation
+# Infrastructure
 
-## Technology Stack
+## Docker Compose
 
-### Core Technologies
+`infra/docker-compose.yml` runs the full stack. Local dev uses just `make infra-up` to start the three infra services (Postgres, Redis, RabbitMQ), then `make dev-all` for the apps.
 
-| Category | Technology | Version | Purpose |
-|----------|------------|---------|---------|
-| Runtime | Node.js | 20 LTS | JavaScript runtime for all microservices |
-| Framework | Express.js | 4.18.x | Web framework for REST APIs |
-| Frontend | React + Vite | Latest | React framework with client-side rendering |
-| Database | PostgreSQL | 16 | Primary relational database |
-| Cache | Redis | 7.2 | In-memory cache and session storage |
-| Message Broker | RabbitMQ | 3.12 | Asynchronous event communication |
-| API Gateway | Express Gateway | 1.17.x | API routing and management |
+`make docker-up` starts the full stack — infra + every service + frontend.
 
-### Supporting Tools
+### Services
 
-| Category | Technology | Version |
-|----------|------------|---------|
-| Package Manager | npm | 10.x |
-| Containerization | Docker | 24.x |
-| Container Orchestration | Docker Compose | 2.24.x |
-| Authentication | JWT | jsonwebtoken 9.x |
-| Validation | Joi | 17.x |
-| ORM | Prisma | 5.x |
-| HTTP Client | Axios | 1.6.x |
-| Environment Config | dotenv | 16.x |
+| Service    | Image                          | Host port | Notes |
+|------------|--------------------------------|-----------|-------|
+| postgres   | postgres:16-alpine             | 5433      | One DB `ecommerce`, schemas created at init |
+| redis      | redis:7-alpine                 | 6379      | AOF + RDB persistence |
+| rabbitmq   | rabbitmq:3-management-alpine   | 5672/15672 | Topology loaded from `infra/rabbitmq/definitions.json` |
+| gateway    | local build (`services/gateway`)   | 3000 | Depends on infra only |
+| auth       | local build                      | 3001 | |
+| user       | local build                      | 3002 | |
+| product    | local build                      | 3003 | |
+| cart       | local build                      | 3004 | |
+| order      | local build                      | 3005 | |
+| payment    | local build                      | 3006 | |
+| notification | local build                  | 3007 | |
+| search     | local build                      | 3008 | |
+| admin      | local build                      | 3009 | |
+| frontend   | local build (`frontend/`)        | 5173 | Nginx-served Vite build, proxies `/api/*` to gateway |
 
----
+All service images are multi-stage `node:20-alpine` → runtime `node:20-alpine`. They run as a non-root user (`appuser`, UID 1001).
 
-## Docker Compose Setup
+### Healthchecks
 
-Create a file named `infra/docker-compose.yml` in your project root:
+Every container has a Docker `HEALTHCHECK`. The infra services use the standard probes (`pg_isready`, `redis-cli ping`, `rabbitmq-diagnostics check_running`). The application services `wget /health` — `/health` is exempt from rate limit so probes stay cheap.
 
-```yaml
-version: '3.8'
+### Topology
 
-services:
-  postgres:
-    image: postgres:16
-    container_name: ecommerce_postgres
-    environment:
-      POSTGRES_USER: ecommerce
-      POSTGRES_PASSWORD: ecommerce_dev_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ecommerce"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+- Single `ecommerce-network` bridge. No segmentation.
+- No resource limits or restart policies yet — see [RUNBOOK.md](RUNBOOK.md) for the production checklist.
 
-  redis:
-    image: redis:7.2-alpine
-    container_name: ecommerce_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+## Postgres
 
-  rabbitmq:
-    image: rabbitmq:3.12-management-alpine
-    container_name: ecommerce_rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: ecommerce
-      RABBITMQ_DEFAULT_PASS: ecommerce_dev_password
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+- Init SQL at `infra/postgres/init-scripts/init-schemas.sql`. Runs once on first container start (volume is empty).
+- The script ONLY creates schemas + the `uuid-ossp` extension. Service tables are created by `prisma db push`.
 
-volumes:
-  postgres_data:
-  redis_data:
-  rabbitmq_data:
-```
+## RabbitMQ
 
----
+- Topology is loaded at boot via `management.load_definitions = /etc/rabbitmq/definitions.json`.
+- See [ARCHITECTURE.md](ARCHITECTURE.md#rabbitmq) for the exchange/routing-key contract.
 
-## Local Development Environment Setup
+## Redis
 
-### Prerequisites
+- Bound to all interfaces (`bind 0.0.0.0`). No auth. Acceptable for local dev only — see [RUNBOOK.md](RUNBOOK.md) for production.
+- AOF + RDB persistence (`appendonly yes`, `save 900 1`, etc.).
+- `allkeys-lru` eviction. Sessions must not evict; if you add large cache entries, consider separate Redis instances.
 
-Ensure the following are installed on your machine:
+## Environment variables
 
-1. **Node.js 20 LTS** - [Download](https://nodejs.org/)
-2. **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop)
-3. **Git** - [Download](https://git-scm.com/)
+The contract lives in `services/<name>/.env.example` per service. The Makefile's `setup-%` target copies `.env.example` → `.env` if missing. CI exports the same keys via workflow `env:`.
 
-### Step-by-Step Setup
+### Service-level variables (gateway + 9 services)
 
-#### 1. Clone and Navigate to Project
+| Variable | Default | Notes |
+|----------|---------|-------|
+| `PORT`                          | per-service | |
+| `SERVICE_NAME`                  | per-service | appears in logs |
+| `NODE_ENV`                      | development | |
+| `DATABASE_URL`                  | `postgresql://postgres:postgres@localhost:5433/ecommerce?schema=<schema>` | |
+| `REDIS_URL`                     | `redis://localhost:6379` | gateway uses `REDIS_HOST`/`REDIS_PORT` instead |
+| `RABBITMQ_URL`                  | `amqp://localhost:5672` | only services that use it |
+| `RABBITMQ_EXCHANGE`             | `ecommerce.events` or `product.events` | per service |
+| `JWT_SECRET`                    | `change-me-in-production` | shared across services |
+| `JWT_REFRESH_SECRET`            | `change-me-too` | auth service only |
+| `JWT_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | `15m` / `7d` | |
+| `CORS_ORIGIN`                   | `http://localhost:5173` | gateway is the only CORS-enforcing layer |
+| `FRONTEND_URL`                  | `http://localhost:5173` | used for redirects + emails |
+| `TAX_RATE`                      | `0.10` | cart + order |
+| `ADMIN_EMAIL`                   | `admin@ecommerce.local` | auth promotes this email to admin |
+| `ADMIN_PASSWORD`                | `Admin123!Change-me` | bootstrap password — change immediately |
+| `STRIPE_SECRET_KEY`             | empty | empty ⇒ mock provider in dev |
+| `STRIPE_WEBHOOK_SECRET`         | `whsec_replace_in_production` | required to verify signatures |
+| `STRIPE_PUBLISHABLE_KEY`        | empty | |
+| `EMAIL_HOST`/`EMAIL_USER`/`EMAIL_PASS`/`EMAIL_FROM`/`EMAIL_PORT`/`EMAIL_SECURE` | empty | SMTP — when empty, no SMTP send attempted |
+| `RATE_LIMIT_WINDOW_MS`          | `900000` (15 min) | gateway is `60000` (1 min) |
+| `RATE_LIMIT_MAX_REQUESTS`       | `100` | gateway is `200` |
+| `LOG_LEVEL`                     | `info` | winston |
+
+### Docker Compose env
+
+`infra/docker-compose.yml` declares a small set of defaults. Override via `.env` in the `infra/` directory or shell env.
 
 ```bash
-git clone <repository-url>
-cd ecommerce-microservices
+# infra/.env (not committed)
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
+STRIPE_SECRET_KEY=...
+STRIPE_WEBHOOK_SECRET=...
+ADMIN_EMAIL=admin@ecommerce.local
+ADMIN_PASSWORD=...
+EMAIL_HOST=...
+EMAIL_PORT=587
+EMAIL_USER=...
+EMAIL_PASS=...
+EMAIL_FROM=...
 ```
 
-#### 2. Start Infrastructure Services
-
-```bash
-# Navigate to infra directory
-cd infra
-
-# Start all infrastructure services
-docker-compose up -d
-
-# Verify services are running
-docker-compose ps
-```
-
-Expected output:
-```
-NAME                IMAGE               COMMAND              SERVICE
-ecommerce_postgres  postgres:16         "docker-entrypoint.s…"   postgres
-ecommerce_redis     redis:7.2-alpine    "redis-server --app…"   redis
-ecommerce_rabbitmq  rabbitmq:3.12-m…    "docker-entrypoint.s…"   rabbitmq
-```
-
-#### 3. Verify Infrastructure Services
-
-```bash
-# Check PostgreSQL
-docker exec -it ecommerce_postgres psql -U ecommerce -c "SELECT version();"
-
-# Check Redis
-docker exec -it ecommerce_redis redis-cli ping
-
-# Check RabbitMQ (management UI at http://localhost:15672)
-docker exec -it ecommerce_rabbitmq rabbitmq-diagnostics ping
-```
-
-#### 4. Setup Each Service
-
-```bash
-# Navigate back to root
-cd ..
-
-# For each service, install dependencies and setup database
-cd services/auth
-npm install
-cp .env.example .env
-npx prisma generate
-npx prisma db push
-
-# Repeat for each service...
-```
-
-#### 5. Start Development Servers
-
-```bash
-# Option 1: Start all services manually (one terminal per service)
-cd services/gateway && npm run dev
-cd services/auth && npm run dev
-cd services/user && npm run dev
-# ... etc
-
-# Option 2: Use concurrently to run multiple services
-npm install -g concurrently
-cd services/gateway && npm run dev
-# (In separate terminals for each service)
-```
-
----
-
-## Environment Variables Structure
-
-### Root .env (Shared Configuration)
-
-Create a `.env` file in the project root:
-
-```env
-# ===================
-# SHARED CONFIGURATION
-# ===================
-
-# Node Environment
-NODE_ENV=development
-
-# Infrastructure Hosts
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=ecommerce
-POSTGRES_PASSWORD=ecommerce_dev_password
-
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-RABBITMQ_HOST=localhost
-RABBITMQ_PORT=5672
-RABBITMQ_USER=ecommerce
-RABBITMQ_PASSWORD=ecommerce_dev_password
-RABBITMQ_MANAGEMENT_PORT=15672
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-JWT_REFRESH_SECRET=your-super-secret-refresh-token-key-change-in-production
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-
-# Frontend URL (for CORS)
-FRONTEND_URL=http://localhost:5173
-```
-
-### Service-Specific .env Files
-
-Each service should have its own `.env` file with service-specific variables.
-
-#### Auth Service (.env)
-
-```env
-# Service Configuration
-PORT=3001
-SERVICE_NAME=auth-service
-DATABASE_SCHEMA=auth
-
-# PostgreSQL
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# JWT (same across all services)
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-JWT_REFRESH_SECRET=your-super-secret-refresh-token-key-change-in-production
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-```
-
-#### User Service (.env)
-
-```env
-PORT=3002
-SERVICE_NAME=user-service
-DATABASE_SCHEMA=user
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-```
-
-#### Product Service (.env)
-
-```env
-PORT=3003
-SERVICE_NAME=product-service
-DATABASE_SCHEMA=product
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-```
-
-#### Cart Service (.env)
-
-```env
-PORT=3004
-SERVICE_NAME=cart-service
-DATABASE_SCHEMA=cart
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-```
-
-#### Order Service (.env)
-
-```env
-PORT=3005
-SERVICE_NAME=order-service
-DATABASE_SCHEMA=order
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-```
-
-#### Payment Service (.env)
-
-```env
-PORT=3006
-SERVICE_NAME=payment-service
-DATABASE_SCHEMA=payment
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-
-# Payment Gateway Configuration (example: Stripe)
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-```
-
-#### Notification Service (.env)
-
-```env
-PORT=3007
-SERVICE_NAME=notification-service
-DATABASE_SCHEMA=notification
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-
-# Email Configuration (example: SendGrid)
-SENDGRID_API_KEY=SG.your_sendgrid_api_key
-FROM_EMAIL=noreply@yourdomain.com
-```
-
-#### Search Service (.env)
-
-```env
-PORT=3008
-SERVICE_NAME=search-service
-DATABASE_SCHEMA=search
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-```
-
-#### Admin Service (.env)
-
-```env
-PORT=3009
-SERVICE_NAME=admin-service
-DATABASE_SCHEMA=admin
-DATABASE_URL=postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-```
-
-#### API Gateway (.env)
-
-```env
-PORT=3000
-SERVICE_NAME=api-gateway
-
-# JWT Validation
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-
-# Upstream Services
-AUTH_SERVICE_URL=http://localhost:3001
-USER_SERVICE_URL=http://localhost:3002
-PRODUCT_SERVICE_URL=http://localhost:3003
-CART_SERVICE_URL=http://localhost:3004
-ORDER_SERVICE_URL=http://localhost:3005
-PAYMENT_SERVICE_URL=http://localhost:3006
-NOTIFICATION_SERVICE_URL=http://localhost:3007
-SEARCH_SERVICE_URL=http://localhost:3008
-ADMIN_SERVICE_URL=http://localhost:3009
-
-# Frontend
-FRONTEND_URL=http://localhost:5173
-```
-
-#### Frontend (.env.local)
-
-```env
-# Vite Configuration
-VITE_API_GATEWAY_URL=http://localhost:3000
-
-# Authentication
-VITE_AUTH_TOKEN_KEY=auth_token
-VITE_REFRESH_TOKEN_KEY=refresh_token
-
-# Development Server
-VITE_DEV_URL=http://localhost:5173
-```
-
----
-
-## Running Infrastructure with Single Command
-
-### Quick Start
-
-Create a script `start-infra.sh` in the `infra` folder:
-
-```bash
-#!/bin/bash
-
-echo "🚀 Starting E-Commerce Infrastructure Services..."
-
-# Change to infra directory
-cd "$(dirname "$0")"
-
-# Start Docker Compose
-docker-compose up -d
-
-# Wait for services to be healthy
-echo "⏳ Waiting for services to be ready..."
-
-# Check PostgreSQL
-until docker exec ecommerce_postgres pg_isready -U ecommerce > /dev/null 2>&1; do
-    echo "  ⏳ Waiting for PostgreSQL..."
-    sleep 2
-done
-echo "  ✅ PostgreSQL is ready"
-
-# Check Redis
-until docker exec ecommerce_redis redis-cli ping > /dev/null 2>&1; do
-    echo "  ⏳ Waiting for Redis..."
-    sleep 2
-done
-echo "  ✅ Redis is ready"
-
-# Check RabbitMQ
-until docker exec ecommerce_rabbitmq rabbitmq-diagnostics ping > /dev/null 2>&1; do
-    echo "  ⏳ Waiting for RabbitMQ..."
-    sleep 2
-done
-echo "  ✅ RabbitMQ is ready"
-
-echo ""
-echo "🎉 All infrastructure services are running!"
-echo ""
-echo "Service URLs:"
-echo "  PostgreSQL:  localhost:5432"
-echo "  Redis:       localhost:6379"
-echo "  RabbitMQ:    localhost:5672 (AMQP)"
-echo "  RabbitMQ UI: localhost:15672"
-echo ""
-echo "To stop: docker-compose down"
-echo "To view logs: docker-compose logs -f"
-```
-
-Make it executable:
-
-```bash
-chmod +x infra/start-infra.sh
-```
-
-### Usage
-
-```bash
-# Start all infrastructure
-./infra/start-infra.sh
-
-# Or simply
-cd infra && docker-compose up -d
-```
-
----
-
-## Additional Commands
-
-### Viewing Logs
-
-```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f postgres
-docker-compose logs -f redis
-docker-compose logs -f rabbitmq
-```
-
-### Stopping Services
-
-```bash
-cd infra
-docker-compose down
-
-# Remove volumes (data will be lost)
-docker-compose down -v
-```
-
-### Resetting Data
-
-```bash
-# Stop and remove volumes
-docker-compose down -v
-
-# Start fresh
-docker-compose up -d
-```
-
-### Database Connection String Format
-
-```
-postgresql://[user]:[password]@[host]:[port]/[database]
-```
-
-Example for this project:
-```
-postgresql://ecommerce:ecommerce_dev_password@localhost:5432/ecommerce
-```
-
----
-
-## Development Workflow
-
-1. **Start Infrastructure**: `./infra/start-infra.sh`
-2. **Setup Each Service**:
-   - Navigate to service directory
-   - Run `npm install`
-   - Copy `.env.example` to `.env`
-   - Run `npx prisma generate`
-   - Run `npx prisma db push` (creates schema)
-3. **Start Services**: `npm run dev` in each service directory
-4. **Start Frontend**: `cd frontend && npm run dev`
-
----
-
-## Production Notes
-
-For production deployment:
-
-1. Change all default passwords in `docker-compose.yml`
-2. Use environment-specific `.env.production` files
-3. Enable SSL/TLS for PostgreSQL and RabbitMQ
-4. Use production-grade Redis (Redis Cluster or managed service)
-5. Set up proper backup strategies for PostgreSQL
-6. Use container orchestration (Kubernetes) for scaling
-7. Implement logging and monitoring (ELK stack, Prometheus, Grafana)
+## Production checklist (not done today)
+
+- [ ] Pin all images by digest (not `alpine`).
+- [ ] Run as non-root in every container.
+- [ ] Add `read_only: true` and `cap_drop: ALL` to every service.
+- [ ] Add `restart: unless-stopped` (Compose already does for our services).
+- [ ] Add `mem_limit` / `cpus` per service.
+- [ ] Move Postgres secrets into Docker secrets.
+- [ ] Add a TLS-terminating reverse proxy in front of the gateway.
+- [ ] Enable RabbitMQ heartbeat + dead-letter queues.
+- [ ] Backups (see [RUNBOOK.md](RUNBOOK.md)).
+- [ ] Health-check HTTP probes for services (currently `wget`, can move to `curl` for prod images).
+- [ ] Resource limits in production docker-compose override.

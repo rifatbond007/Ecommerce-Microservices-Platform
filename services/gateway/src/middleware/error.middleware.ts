@@ -2,33 +2,27 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
-export interface ErrorResponse {
-  success: boolean;
-  message: string;
-  code?: string;
-  statusCode: number;
-  stack?: string;
-}
-
+/**
+ * Canonical error envelope (matches all other services).
+ *    { success: false, error: { code, message, details? } }
+ */
 export const errorMiddleware = (
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   const statusCode = err instanceof AppError ? err.statusCode : 500;
+  const code =
+    (err instanceof AppError && err.errorCode) || 'INTERNAL_SERVER_ERROR';
   const message = err.message || 'Internal Server Error';
-  const code = err instanceof AppError ? err.code : 'INTERNAL_ERROR';
+  const details =
+    err instanceof AppError && err.details ? err.details : undefined;
 
-  const errorResponse: ErrorResponse = {
-    success: false,
-    message,
-    code,
-    statusCode,
-  };
-
-  if (process.env.NODE_ENV !== 'production') {
-    errorResponse.stack = err.stack;
+  const errorBody: Record<string, unknown> = { code, message };
+  if (details) errorBody.details = details;
+  if (process.env.NODE_ENV !== 'production' && err.stack) {
+    errorBody.stack = err.stack;
   }
 
   logger.error(`[${req.method}] ${req.path} - ${statusCode}: ${message}`, {
@@ -38,10 +32,13 @@ export const errorMiddleware = (
     query: req.query,
   });
 
-  res.status(statusCode).json(errorResponse);
+  res.status(statusCode).json({ success: false, error: errorBody });
 };
 
-export const notFoundMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const error = new AppError(`Route ${req.originalUrl} not found`, 404, 'NOT_FOUND');
-  next(error);
+export const notFoundMiddleware = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  next(new AppError(404, 'NOT_FOUND', `Route ${req.originalUrl} not found`));
 };

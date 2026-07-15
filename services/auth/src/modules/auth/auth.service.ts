@@ -59,16 +59,21 @@ export class AuthService {
       role,
     });
 
-    await userRepository.update(user.id, { verificationToken });
+    if (config.nodeEnv === 'development') {
+      await userRepository.update(user.id, { verificationToken: null, isVerified: true });
+      user.isVerified = true;
+    } else {
+      await userRepository.update(user.id, { verificationToken });
 
-    try {
-      await sendVerificationEmail({
-        email: user.email,
-        username: user.username,
-        token: verificationToken,
-      });
-    } catch (error) {
-      logger.warn('Failed to send verification email, user still registered', { userId: user.id });
+      try {
+        await sendVerificationEmail({
+          email: user.email,
+          username: user.username,
+          token: verificationToken,
+        });
+      } catch (error) {
+        logger.warn('Failed to send verification email, user still registered', { userId: user.id });
+      }
     }
 
     const tokens = await this.generateTokens(user.id, user.email, role, ipAddress, userAgent);
@@ -100,7 +105,7 @@ export class AuthService {
       throw new UnauthorizedError('Account is disabled');
     }
 
-    if (!user.isVerified) {
+    if (!user.isVerified && config.nodeEnv !== 'development') {
       throw new UnauthorizedError('Please verify your email before logging in');
     }
 

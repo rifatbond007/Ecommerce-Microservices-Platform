@@ -3,10 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
 
 export const createApp = (): Express => {
   const app = express();
 
+  app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -22,6 +25,9 @@ export const createApp = (): Express => {
       timestamp: new Date().toISOString(),
     });
   });
+
+  // @ts-expect-error — swagger-ui-express types lag Express 4.22
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   app.use('/api/v1/admin', routes);
 

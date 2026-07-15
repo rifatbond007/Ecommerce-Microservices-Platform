@@ -22,7 +22,7 @@ export function ForgotPasswordPage() {
       setSent(true);
       toast({ title: 'Email sent', description: 'Check your inbox for the reset link', variant: 'success' });
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Failed to send reset email';
+      const message = err.response?.data?.error?.message || 'Failed to send reset email';
       setError(message);
       toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {

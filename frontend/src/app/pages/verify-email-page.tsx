@@ -33,7 +33,7 @@ export function VerifyEmailPage() {
         }
       } catch (err: any) {
         if (!cancelled) {
-          const msg = err.response?.data?.message || 'Failed to verify email';
+          const msg = err.response?.data?.error?.message || 'Failed to verify email';
           setStatus('error');
           setMessage(msg);
           toast({ title: 'Verification failed', description: msg, variant: 'destructive' });

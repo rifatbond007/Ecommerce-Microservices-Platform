@@ -21,6 +21,15 @@ export const config = {
 
   rabbitmq: {
     url: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
+    exchange: process.env.RABBITMQ_EXCHANGE || 'ecommerce.events',
+  },
+
+  tax: {
+    rate: parseFloat(process.env.TAX_RATE || '0.10'),
+  },
+
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   },
 
   authService: {
