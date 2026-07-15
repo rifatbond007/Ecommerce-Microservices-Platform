@@ -70,7 +70,9 @@ export class SearchIndexRepository {
       distinct: ['categoryName'],
       orderBy: { categoryName: 'asc' },
     });
-    return result.map((r) => r.categoryName).filter(Boolean) as string[];
+    return result
+      .map((r: { categoryName: string | null }) => r.categoryName)
+      .filter(Boolean) as string[];
   }
 
   async getSuggestions(prefix: string, limit = 5) {

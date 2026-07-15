@@ -145,7 +145,7 @@ export class OrdersService {
       throw new ValidationError('Can only return delivered orders');
     }
 
-    const orderItem = order.items.find((item) => item.id === input.orderItemId);
+    const orderItem = order.items.find((item: { id: string }) => item.id === input.orderItemId);
     if (!orderItem) {
       throw new NotFoundError('Order item');
     }

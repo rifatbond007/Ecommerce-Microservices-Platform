@@ -58,7 +58,9 @@ export class ReviewsService {
   async createReview(userId: string, input: CreateReviewInput): Promise<ReviewResponse> {
     if (input.orderId) {
       const existingReviews = await reviewRepository.findByOrderId(input.orderId);
-      const productHasReview = existingReviews.some(r => r.productId === input.productId);
+      const productHasReview = existingReviews.some(
+        (r: { productId: string }) => r.productId === input.productId
+      );
       
       if (productHasReview) {
         throw new ForbiddenError('You have already reviewed this product from this order');

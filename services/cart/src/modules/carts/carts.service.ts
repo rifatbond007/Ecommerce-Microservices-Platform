@@ -226,7 +226,10 @@ export class CartsService {
     const cart = await cartRepository.findById(cartId);
     if (!cart) return;
 
-    const subtotal = cart.items.reduce((sum, item) => sum + Number(item.totalPrice), 0);
+    const subtotal = cart.items.reduce(
+      (sum: number, item: { totalPrice: unknown }) => sum + Number(item.totalPrice),
+      0
+    );
     const taxTotal = subtotal * config.tax.rate;
     const total = subtotal + taxTotal + Number(cart.shippingTotal) - Number(cart.discountTotal);
 

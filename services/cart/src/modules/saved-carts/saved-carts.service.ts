@@ -34,7 +34,9 @@ export class SavedCartsService {
 
   async getSavedCarts(userId: string): Promise<SavedCartResponse[]> {
     const carts = await savedCartRepository.findByUserId(userId);
-    return carts.map((cart) => this.formatSavedCartResponse(cart));
+    return carts.map((cart: Parameters<typeof this.formatSavedCartResponse>[0]) =>
+      this.formatSavedCartResponse(cart)
+    );
   }
 
   async getSavedCartById(id: string, userId: string): Promise<SavedCartResponse> {
