@@ -1,601 +1,240 @@
-# Service List
+# Service catalog
+
+Every service follows the same layout. Endpoints below are the canonical HTTP surface exposed via the gateway at `/api/v1/...`. To browse live docs, see `/docs` on the running gateway (per-service Swagger UIs).
 
 ---
 
-## 1. API Gateway
+## 1. gateway — port 3000
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | api-gateway |
-| **Port** | 3000 |
-| **Database Schema** | N/A (routes only) |
-| **Responsibility** | Request routing, authentication, rate limiting, CORS |
+**Responsibility:** reverse proxy, JWT verification, rate limit, CORS. The single source of CORS truth for the platform.
 
-### API Endpoints
+| Endpoint                          | Notes |
+|-----------------------------------|-------|
+| `GET /health`                     | liveness |
+| `GET /api/v1/routes`              | current routing table |
+| `GET /docs`                       | list of per-service Swagger UIs |
 
-| Method | Route | Upstream | Auth |
-|-------|-------|----------|------|
-| * | /api/v1/auth/* | Auth Service (3001) | varies |
-| * | /api/v1/users/* | User Service (3002) | Yes |
-| * | /api/v1/products/* | Product Service (3003) | varies |
-| * | /api/v1/cart/* | Cart Service (3004) | Yes |
-| * | /api/v1/orders/* | Order Service (3005) | Yes |
-| * | /api/v1/payments/* | Payment Service (3006) | Yes |
-| * | /api/v1/search/* | Search Service (3008) | No |
-| * | /api/v1/admin/* | Admin Service (3009) | Yes (Admin) |
-
-### RabbitMQ Events
-
-| Type | Exchange | Routing Key |
-|------|----------|-------------|
-| Consumes | N/A | Routes HTTP only |
-
-### Dependencies
-
-- All backend services (upstream)
+Anything else under `/api/v1/...` is forwarded per the routing table — see [ARCHITECTURE.md](ARCHITECTURE.md#gateway-routing-table).
 
 ---
 
-## 2. Auth Service
+## 2. auth — port 3001
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | auth-service |
-| **Port** | 3001 |
-| **Database Schema** | auth |
-| **Responsibility** | User authentication, JWT/refresh token issuance, session management |
+**Schema:** `auth` · **Auth:** optional (open for register/login/refresh).
 
-### Database Schema: auth
+| Method | Path                                | Auth | Purpose |
+|--------|-------------------------------------|------|---------|
+| POST   | `/api/v1/auth/register`             | no   | Create account (auto-promotes `ADMIN_EMAIL` to role `admin`) |
+| POST   | `/api/v1/auth/login`                | no   | Issue access + refresh tokens |
+| POST   | `/api/v1/auth/refresh`              | no   | Exchange refresh token for new pair |
+| POST   | `/api/v1/auth/logout`               | yes  | Revoke session row |
+| POST   | `/api/v1/auth/forgot-password`      | no   | Send reset email |
+| POST   | `/api/v1/auth/reset-password`       | no   | Consume reset token |
+| POST   | `/api/v1/auth/verify-email`         | no   | Consume verification token |
+| POST   | `/api/v1/auth/change-password`      | yes  | Update own password |
+| GET    | `/api/v1/auth/me`                   | yes  | Current user profile |
+| GET    | `/api/v1/auth/seller/status`        | yes  | Seller approval status |
+| POST   | `/api/v1/auth/seller/request`       | yes  | Become a seller |
+| GET    | `/api/v1/auth/admin/seller-requests`| yes (admin) | List pending seller requests |
+| POST   | `/api/v1/auth/admin/seller-requests/:id/approve` | yes (admin) | Approve |
+| POST   | `/api/v1/auth/admin/seller-requests/:id/reject`  | yes (admin) | Reject |
+| GET    | `/api/v1/auth/users`                | yes (admin) | List users |
+| GET    | `/api/v1/auth/users/:userId`        | yes (admin) | Get user |
+| PUT    | `/api/v1/auth/users/:userId`        | yes (admin) | Update user (role, status) |
+| DELETE | `/api/v1/auth/users/:userId`        | yes (admin) | Delete user |
+| GET    | `/api/v1/auth/sessions`             | yes  | List my sessions |
+| DELETE | `/api/v1/auth/sessions/:id`         | yes  | Revoke a specific session |
 
-```sql
--- users table
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(20) DEFAULT 'user',
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- sessions table (Redis recommended)
--- stores refresh tokens with expiration
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| POST | /api/v1/auth/register | Register new user | No |
-| POST | /api/v1/auth/login | Login user | No |
-| POST | /api/v1/auth/refresh | Refresh access token | No |
-| POST | /api/v1/auth/logout | Logout user | Yes |
-| GET | /api/v1/auth/verify | Verify token validity | Yes |
-| GET | /api/v1/auth/me | Get current user | Yes |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Publishes | user.registered | When new user registers |
-| Publishes | user.logged_in | When user logs in |
-| Publishes | user.logged_out | When user logs out |
-
-### Dependencies
-
-- PostgreSQL (auth schema)
-- Redis (session storage)
+**Events published:** none.
+**Events consumed:** none.
+**External deps:** Redis (sessions), SMTP for email.
 
 ---
 
-## 3. User Service
+## 3. user — port 3002
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | user-service |
-| **Port** | 3002 |
-| **Database Schema** | user |
-| **Responsibility** | User profile management, addresses, preferences |
+**Schema:** `user_service` · **Auth:** required for all routes.
 
-### Database Schema: user
+| Method | Path                                       | Purpose |
+|--------|--------------------------------------------|---------|
+| GET    | `/api/v1/users/me`                         | My profile |
+| PUT    | `/api/v1/users/me`                         | Update my profile |
+| DELETE | `/api/v1/users/me`                         | Delete account |
+| GET    | `/api/v1/users/me/addresses`               | List my addresses |
+| POST   | `/api/v1/users/me/addresses`               | Add address |
+| PUT    | `/api/v1/users/me/addresses/:id`           | Update address |
+| DELETE | `/api/v1/users/me/addresses/:id`           | Delete address |
+| POST   | `/api/v1/users/me/addresses/:id/default`   | Set as default |
+| GET    | `/api/v1/users/me/wishlists`               | List wishlists |
+| POST   | `/api/v1/users/me/wishlists`               | Create wishlist |
+| POST   | `/api/v1/users/me/wishlists/:id/items`     | Add product to wishlist |
+| DELETE | `/api/v1/users/me/wishlists/:id/items/:productId` | Remove |
+| GET    | `/api/v1/users/reviews/product/:productId` | Reviews for a product |
+| POST   | `/api/v1/users/me/reviews`                 | Create review |
+| POST   | `/api/v1/users/me/reviews/:id/helpful`     | Mark helpful |
+| GET    | `/api/v1/sellers/status`                   | My seller status |
+| POST   | `/api/v1/sellers/request`                  | Become a seller |
 
-```sql
--- profiles table
-CREATE TABLE profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID UNIQUE NOT NULL,
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-    phone VARCHAR(20),
-    avatar_url VARCHAR(500),
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- addresses table
-CREATE TABLE addresses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    address_type VARCHAR(20), -- 'shipping', 'billing'
-    street VARCHAR(255),
-    city VARCHAR(100),
-    state VARCHAR(100),
-    postal_code VARCHAR(20),
-    country VARCHAR(100) DEFAULT 'USA',
-    is_default BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| GET | /api/v1/users/me | Get current user profile | Yes |
-| PUT | /api/v1/users/me | Update profile | Yes |
-| GET | /api/v1/users/me/addresses | List addresses | Yes |
-| POST | /api/v1/users/me/addresses | Add address | Yes |
-| PUT | /api/v1/users/me/addresses/:id | Update address | Yes |
-| DELETE | /api/v1/users/me/addresses/:id | Delete address | Yes |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Consumes | user.registered | Create profile for new user |
-| Publishes | user.profile.updated | When profile changes |
-
-### Dependencies
-
-- Auth Service (validate tokens)
+**Events published:** none.
+**Events consumed:** none (gateway-forwards `x-user-id`).
 
 ---
 
-## 4. Product Service
+## 4. product — port 3003
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | product-service |
-| **Port** | 3003 |
-| **Database Schema** | product |
-| **Responsibility** | Product catalog, categories, inventory management |
+**Schema:** `product_service` · **Auth:** optional (admin write actions require admin).
 
-### Database Schema: product
+| Method | Path                                       | Auth |
+|--------|--------------------------------------------|------|
+| GET    | `/api/v1/products`                         | optional |
+| POST   | `/api/v1/products`                         | admin |
+| GET    | `/api/v1/products/featured`                | optional |
+| GET    | `/api/v1/products/:id`                     | optional |
+| GET    | `/api/v1/products/slug/:slug`              | optional |
+| PUT    | `/api/v1/products/:id`                     | admin |
+| DELETE | `/api/v1/products/:id`                     | admin |
+| GET    | `/api/v1/categories`                       | optional |
+| POST   | `/api/v1/categories`                       | admin |
+| GET    | `/api/v1/categories/tree`                  | optional |
+| GET    | `/api/v1/categories/:id`                   | optional |
+| PUT    | `/api/v1/categories/:id`                   | admin |
+| DELETE | `/api/v1/categories/:id`                   | admin |
+| GET    | `/api/v1/brands`                           | optional |
+| CRUD   | `/api/v1/brands/:id`                       | admin (write) |
+| CRUD   | `/api/v1/variants`                         | admin (write) |
+| CRUD   | `/api/v1/inventory`                        | admin (write) |
+| POST   | `/api/v1/inventory/adjust`                 | admin |
+| POST   | `/api/v1/inventory/reserve`                | internal |
+| POST   | `/api/v1/inventory/release`                | internal |
+| CRUD   | `/api/v1/warehouses`                       | admin (write) |
 
-```sql
--- categories table
-CREATE TABLE categories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    parent_id UUID REFERENCES categories(id),
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- products table
-CREATE TABLE products (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    price DECIMAL(10,2) NOT NULL,
-    compare_price DECIMAL(10,2),
-    category_id UUID REFERENCES categories(id),
-    images TEXT[], -- array of image URLs
-    sku VARCHAR(100) UNIQUE,
-    inventory_quantity INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- product_variants table
-CREATE TABLE product_variants (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id UUID NOT NULL REFERENCES products(id),
-    name VARCHAR(255),
-    sku VARCHAR(100),
-    price DECIMAL(10,2),
-    inventory_quantity INT DEFAULT 0,
-    attributes JSONB, -- {color: "red", size: "M"}
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| GET | /api/v1/products | List products (paginated) | No |
-| GET | /api/v1/products/:id | Get product details | No |
-| GET | /api/v1/products/slug/:slug | Get product by slug | No |
-| GET | /api/v1/products/search | Search products | No |
-| POST | /api/v1/products | Create product | Yes (Admin) |
-| PUT | /api/v1/products/:id | Update product | Yes (Admin) |
-| DELETE | /api/v1/products/:id | Delete product | Yes (Admin) |
-| GET | /api/v1/categories | List categories | No |
-| POST | /api/v1/categories | Create category | Yes (Admin) |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Publishes | product.created | New product added |
-| Publishes | product.updated | Product modified |
-| Publishes | product.deleted | Product removed |
-| Publishes | product.inventory_changed | Stock level changed |
-
-### Dependencies
-
-- None (core service)
+**Events published:** planned (`product.created`, `product.updated`, `product.deleted`, `product.inventory_changed`) — see [ARCHITECTURE.md](ARCHITECTURE.md#rabbitmq).
+**Cache:** Redis-backed product detail + category tree (TTL in `CACHE_TTL_*` envs).
 
 ---
 
-## 5. Cart Service
+## 5. cart — port 3004
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | cart-service |
-| **Port** | 3004 |
-| **Database Schema** | cart |
-| **Responsibility** | Shopping cart management, item quantity, pricing |
+**Schema:** `cart_service` · **Auth:** required.
 
-### Database Schema: cart
+| Method | Path                                | Purpose |
+|--------|-------------------------------------|---------|
+| GET    | `/api/v1/carts`                     | Get my active cart |
+| POST   | `/api/v1/carts/init`                | Initialise a cart (idempotent) |
+| DELETE | `/api/v1/carts/:cartId`             | Delete cart |
+| DELETE | `/api/v1/carts/:cartId/clear`       | Remove all items |
+| POST   | `/api/v1/carts/items`               | Add an item |
+| PUT    | `/api/v1/carts/:cartId/items/:itemId` | Update quantity |
+| DELETE | `/api/v1/carts/:cartId/items/:itemId` | Remove item |
+| POST   | `/api/v1/carts/:cartId/coupon`      | Apply coupon |
+| DELETE | `/api/v1/carts/:cartId/coupon`      | Remove coupon |
+| GET    | `/api/v1/saved-carts`               | List saved carts |
+| POST   | `/api/v1/saved-carts`               | Save current cart |
+| POST   | `/api/v1/saved-carts/:id/restore`   | Restore into a new active cart |
+| DELETE | `/api/v1/saved-carts/:id`           | Delete a saved cart |
 
-```sql
--- carts table
-CREATE TABLE carts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    status VARCHAR(20) DEFAULT 'active', -- 'active', 'converted'
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- cart_items table
-CREATE TABLE cart_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cart_id UUID NOT NULL REFERENCES carts(id),
-    product_id UUID NOT NULL,
-    variant_id UUID,
-    quantity INT NOT NULL DEFAULT 1,
-    price DECIMAL(10,2) NOT NULL, -- price at time of adding
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| GET | /api/v1/cart | Get current user's cart | Yes |
-| POST | /api/v1/cart/items | Add item to cart | Yes |
-| PUT | /api/v1/cart/items/:id | Update item quantity | Yes |
-| DELETE | /api/v1/cart/items/:id | Remove item from cart | Yes |
-| DELETE | /api/v1/cart | Clear cart | Yes |
-| POST | /api/v1/cart/checkout | Convert cart to order | Yes |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Consumes | product.price_changed | Update item price |
-| Consumes | product.inventory_changed | Validate availability |
-| Publishes | cart.updated | Cart modified |
-
-### Dependencies
-
-- Product Service (validate products/prices)
-- Order Service (convert to order)
+**Events published:** none today.
+**Events consumed:** none.
 
 ---
 
-## 6. Order Service
+## 6. order — port 3005
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | order-service |
-| **Port** | 3005 |
-| **Database Schema** | order |
-| **Responsibility** | Order creation, status tracking, history |
+**Schema:** `order_schema` · **Auth:** required.
 
-### Database Schema: order
+| Method | Path                                 | Purpose |
+|--------|--------------------------------------|---------|
+| GET    | `/api/v1/orders`                     | My orders |
+| GET    | `/api/v1/orders/:id`                 | Order detail |
+| GET    | `/api/v1/orders/number/:orderNumber` | Lookup by number |
+| POST   | `/api/v1/orders`                     | Create order from cart |
+| PUT    | `/api/v1/orders/:id/status`          | Update status (admin) |
+| POST   | `/api/v1/orders/:id/cancel`          | Cancel order |
+| POST   | `/api/v1/orders/:id/return`          | Request return |
 
-```sql
--- orders table
-CREATE TABLE orders (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_number VARCHAR(50) UNIQUE NOT NULL,
-    user_id UUID NOT NULL,
-    status VARCHAR(30) DEFAULT 'pending', -- pending, confirmed, processing, shipped, delivered, cancelled
-    subtotal DECIMAL(10,2) NOT NULL,
-    tax DECIMAL(10,2) DEFAULT 0,
-    shipping_cost DECIMAL(10,2) DEFAULT 0,
-    total DECIMAL(10,2) NOT NULL,
-    shipping_address JSONB,
-    billing_address JSONB,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- order_items table
-CREATE TABLE order_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id UUID NOT NULL REFERENCES orders(id),
-    product_id UUID NOT NULL,
-    variant_id UUID,
-    product_name VARCHAR(255) NOT NULL,
-    quantity INT NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
-    total_price DECIMAL(10,2) NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- order_status_history table
-CREATE TABLE order_status_history (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id UUID NOT NULL REFERENCES orders(id),
-    status VARCHAR(30) NOT NULL,
-    note TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| GET | /api/v1/orders | List user orders | Yes |
-| GET | /api/v1/orders/:id | Get order details | Yes |
-| POST | /api/v1/orders | Create new order | Yes |
-| PUT | /api/v1/orders/:id/status | Update order status | Yes (Admin) |
-| GET | /api/v1/orders/:id/tracking | Get tracking info | Yes |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Publishes | order.created | New order placed |
-| Publishes | order.status_changed | Order status updated |
-| Publishes | order.cancelled | Order cancelled |
-| Consumes | payment.completed | Payment successful |
-| Consumes | payment.failed | Payment failed |
-
-### Dependencies
-
-- Cart Service (create order from cart)
-- Product Service (validate products)
-- Payment Service (payment status)
-- Notification Service (send confirmation)
+**Events published:** planned (`order.created`, `order.status_changed`) — see [ARCHITECTURE.md](ARCHITECTURE.md#rabbitmq).
+**Events consumed:** none.
 
 ---
 
-## 7. Payment Service
+## 7. payment — port 3006
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | payment-service |
-| **Port** | 3006 |
-| **Database Schema** | payment |
-| **Responsibility** | Payment processing, transaction management |
+**Schema:** `payment_service` · **Auth:** required for `/payments/*`, none for `/webhooks/*` (verified per-provider).
 
-### Database Schema: payment
+| Method | Path                                       | Auth |
+|--------|--------------------------------------------|------|
+| POST   | `/api/v1/payments/process`                 | yes  | Process a payment (Stripe when configured, mock provider otherwise) |
+| GET    | `/api/v1/payments`                         | yes  | List my payments |
+| GET    | `/api/v1/payments/:id`                     | yes  | Payment detail |
+| GET    | `/api/v1/payments/order/:orderId`          | yes  | Payment for a specific order |
+| POST   | `/api/v1/payments/:id/refund`              | yes  | Request refund |
+| POST   | `/api/v1/webhooks/stripe`                  | no — Stripe-Signature HMAC verified |
+| POST   | `/api/v1/webhooks/generic`                 | no — provider secret |
 
-```sql
--- payments table
-CREATE TABLE payments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id UUID NOT NULL,
-    user_id UUID NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
-    currency VARCHAR(10) DEFAULT 'USD',
-    status VARCHAR(30) DEFAULT 'pending', -- pending, processing, completed, failed, refunded
-    payment_method VARCHAR(50), -- stripe, paypal
-    payment_intent_id VARCHAR(255), -- gateway reference
-    transaction_id VARCHAR(255),
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- refunds table
-CREATE TABLE refunds (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    payment_id UUID NOT NULL REFERENCES payments(id),
-    amount DECIMAL(10,2) NOT NULL,
-    reason TEXT,
-    status VARCHAR(30) DEFAULT 'pending',
-    refund_id VARCHAR(255),
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| POST | /api/v1/payments/process | Process payment | Yes |
-| GET | /api/v1/payments/:orderId | Get payment by order | Yes |
-| GET | /api/v1/payments/:id | Get payment details | Yes |
-| POST | /api/v1/payments/:id/refund | Request refund | Yes |
-| POST | /api/v1/webhooks/stripe | Stripe webhook handler | No |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Consumes | order.created | Process payment for new order |
-| Publishes | payment.completed | Payment successful |
-| Publishes | payment.failed | Payment failed |
-| Publishes | payment.refunded | Refund processed |
-
-### Dependencies
-
-- Order Service (update order status)
-- Notification Service (send receipt)
+**Events published:** planned (`payment.completed`, `payment.failed`, `payment.refunded`).
+**Events consumed:** none wired today.
 
 ---
 
-## 8. Notification Service
+## 8. notification — port 3007
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | notification-service |
-| **Port** | 3007 |
-| **Database Schema** | notification |
-| **Responsibility** | Email, SMS, push notifications |
+**Schema:** `notification_service` · **Auth:** required.
 
-### Database Schema: notification
+| Method | Path                                | Purpose |
+|--------|-------------------------------------|---------|
+| GET    | `/api/v1/notifications`             | List my notifications |
+| PUT    | `/api/v1/notifications/:id/read`    | Mark one read |
+| PUT    | `/api/v1/notifications/read-all`    | Mark all read |
+| DELETE | `/api/v1/notifications/:id`         | Delete |
+| DELETE | `/api/v1/notifications`             | Clear all |
+| GET    | `/api/v1/notifications/preferences` | Channel / category preferences |
+| PUT    | `/api/v1/notifications/preferences` | Update preferences |
 
-```sql
--- notification_preferences table
-CREATE TABLE notification_preferences (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID UNIQUE NOT NULL,
-    email_enabled BOOLEAN DEFAULT true,
-    sms_enabled BOOLEAN DEFAULT false,
-    push_enabled BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- notifications table
-CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    type VARCHAR(30) NOT NULL, -- order_confirmation, payment_receipt, etc
-    channel VARCHAR(20) NOT NULL, -- email, sms, push
-    subject TEXT,
-    message TEXT NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending', -- pending, sent, failed
-    sent_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| GET | /api/v1/notifications | List user notifications | Yes |
-| PUT | /api/v1/notifications/preferences | Update preferences | Yes |
-| GET | /api/v1/notifications/preferences | Get preferences | Yes |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Consumes | order.created | Send order confirmation |
-| Consumes | order.status_changed | Send status update |
-| Consumes | payment.completed | Send payment receipt |
-| Consumes | payment.failed | Send payment failure notice |
-| Consumes | user.registered | Send welcome email |
-
-### Dependencies
-
-- All services (consumes events)
+**Events published:** planned (`notification.email` for retry workers).
+**Events consumed:** planned (`order.*`, `payment.*`, `user.registered`).
 
 ---
 
-## 9. Search Service
+## 9. search — port 3008
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | search-service |
-| **Port** | 3008 |
-| **Database Schema** | search |
-| **Responsibility** | Product search, filtering, suggestions |
+**Schema:** `search_service` · **Auth:** optional.
 
-### Database Schema: search
+| Method | Path                                | Purpose |
+|--------|-------------------------------------|---------|
+| GET    | `/api/v1/search/products?q=...`     | Full-text search |
+| GET    | `/api/v1/search/suggestions?q=...`  | Typeahead |
+| GET    | `/api/v1/search/trending`           | Top searches |
+| POST   | `/api/v1/search/click`              | Log a result click |
 
-```sql
--- search_logs table
-CREATE TABLE search_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID,
-    query VARCHAR(255) NOT NULL,
-    filters JSONB,
-    results_count INT,
-    clicked_product_id UUID,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- product_search_index (PostgreSQL full-text search)
--- Using pg_search extension
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| GET | /api/v1/search/products | Search products | No |
-| GET | /api/v1/search/suggestions | Get search suggestions | No |
-| GET | /api/v1/search/trending | Get trending searches | No |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Consumes | product.created | Index new product |
-| Consumes | product.updated | Update product index |
-| Consumes | product.deleted | Remove from index |
-
-### Dependencies
-
-- Product Service (read products for indexing)
+**Events published:** none.
+**Events consumed:** planned (`product.*`) on `product.events`.
 
 ---
 
-## 10. Admin Service
+## 10. admin — port 3009
 
-| Property | Value |
-|----------|-------|
-| **Service Name** | admin-service |
-| **Port** | 3009 |
-| **Database Schema** | admin |
-| **Responsibility** | Admin dashboard, analytics, user/product management |
+**Schema:** `admin_service` · **Auth:** required (admin only).
 
-### Database Schema: admin
+| Method | Path                                | Purpose |
+|--------|-------------------------------------|---------|
+| GET    | `/api/v1/admin/dashboard/stats`     | Aggregated stats from other services |
+| GET    | `/api/v1/admin/dashboard/activity`  | Recent activity |
+| GET    | `/api/v1/admin/users`               | List users |
+| PUT    | `/api/v1/admin/users/:id`           | Update user |
+| DELETE | `/api/v1/admin/users/:id`           | Delete user |
+| GET    | `/api/v1/admin/products`            | List products |
+| PUT    | `/api/v1/admin/products/:id`        | Update product |
+| DELETE | `/api/v1/admin/products/:id`        | Delete product |
+| PATCH  | `/api/v1/admin/products/:id/active` | Toggle active flag |
+| PATCH  | `/api/v1/admin/products/:id/featured` | Toggle featured flag |
+| GET    | `/api/v1/admin/orders`              | List orders |
+| PUT    | `/api/v1/admin/orders/:id/status`   | Update status |
+| POST   | `/api/v1/admin/orders/:id/cancel`   | Cancel |
+| GET    | `/api/v1/admin/settings`            | Public + private settings |
+| GET    | `/api/v1/admin/settings/public`     | Public settings |
+| PUT    | `/api/v1/admin/settings`            | Update settings |
 
-```sql
--- admin_users table
-CREATE TABLE admin_users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    permissions JSONB DEFAULT '[]',
-    created_at TIMESTAMP DEFAULT NOW()
-);
+**Events published:** none.
+**Events consumed:** none.
 
--- For analytics, views into other schemas
--- Use foreign data wrappers or read replicas
-```
-
-### API Endpoints
-
-| Method | Route | Description | Auth |
-|-------|-------|-------------|------|
-| GET | /api/v1/admin/analytics/overview | Dashboard overview | Yes (Admin) |
-| GET | /api/v1/admin/analytics/sales | Sales analytics | Yes (Admin) |
-| GET | /api/v1/admin/analytics/users | User analytics | Yes (Admin) |
-| GET | /api/v1/admin/users | List all users | Yes (Admin) |
-| PUT | /api/v1/admin/users/:id | Update user | Yes (Admin) |
-| GET | /api/v1/admin/products | List all products | Yes (Admin) |
-| PUT | /api/v1/admin/products/:id | Update product | Yes (Admin) |
-| GET | /api/v1/admin/orders | List all orders | Yes (Admin) |
-| PUT | /api/v1/admin/orders/:id/status | Update order | Yes (Admin) |
-
-### RabbitMQ Events
-
-| Type | Event | Description |
-|------|-------|-------------|
-| Consumes | order.created | Track new orders |
-| Consumes | payment.completed | Track revenue |
-
-### Dependencies
-
-- All services (read access)
+Admin is intentionally thin — it aggregates from auth/user/product/order/payment via authenticated axios calls.

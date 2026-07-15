@@ -17,6 +17,7 @@ export const config = {
 
   rabbitmq: {
     url: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
+    exchange: process.env.RABBITMQ_EXCHANGE || 'ecommerce.events',
   },
 
   jwt: {
@@ -44,6 +45,10 @@ export const config = {
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  },
+
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   },
 
   logging: {

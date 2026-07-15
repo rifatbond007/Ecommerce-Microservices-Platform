@@ -112,9 +112,9 @@ export function AddressesPage() {
     setSaving(true);
     try {
       if (editingId) {
-        await userApi.updateAddress(editingId, form);
+        await userApi.updateAddress(editingId, form as unknown as Record<string, unknown>);
       } else {
-        await userApi.addAddress(form);
+        await userApi.addAddress(form as unknown as Record<string, unknown>);
       }
       setDialogOpen(false);
       await load();

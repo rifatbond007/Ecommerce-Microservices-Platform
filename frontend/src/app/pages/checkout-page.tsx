@@ -79,9 +79,9 @@ export function CheckoutPage() {
     setError('');
     try {
       const { data } = await orderApi.createOrder({
-        items: items.map(item => ({ productId: item.productId, quantity: item.quantity, price: item.unitPrice })),
-        shippingAddressId: selectedAddressId,
-        paymentMethod,
+        cartId: items[0]?.cartId ?? '',
+        addressId: selectedAddressId,
+        notes: paymentMethod === 'cod' ? 'Pay on delivery' : undefined,
       });
       const id = data?.order?.id || data?.id || data?.orderId;
       if (!id) throw new Error('No order ID returned');
@@ -89,7 +89,7 @@ export function CheckoutPage() {
       useCartStore.getState().clearCart();
       setOrderId(id);
       setStep(4);
-    } catch (err: any) { setError(err.response?.data?.message || 'Failed to place order'); }
+    } catch (err: any) { setError(err.response?.data?.error?.message || 'Failed to place order'); }
     finally { setSubmitting(false); }
   };
 

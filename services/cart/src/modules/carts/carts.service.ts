@@ -1,6 +1,7 @@
 import { cartRepository, cartItemRepository } from '../../repositories';
 import { NotFoundError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
+import { config } from '../../config';
 
 export interface CartItemResponse {
   id: string;
@@ -226,7 +227,7 @@ export class CartsService {
     if (!cart) return;
 
     const subtotal = cart.items.reduce((sum, item) => sum + Number(item.totalPrice), 0);
-    const taxTotal = subtotal * 0.1;
+    const taxTotal = subtotal * config.tax.rate;
     const total = subtotal + taxTotal + Number(cart.shippingTotal) - Number(cart.discountTotal);
 
     await cartRepository.update(cartId, {

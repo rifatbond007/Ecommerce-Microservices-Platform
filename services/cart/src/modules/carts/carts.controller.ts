@@ -93,7 +93,7 @@ export class CartsController {
     try {
       const { cartId } = req.params;
       await cartsService.deleteCart(cartId);
-      res.status(204).json({ success: true });
+      res.status(204).send();
     } catch (error) {
       next(error);
     }

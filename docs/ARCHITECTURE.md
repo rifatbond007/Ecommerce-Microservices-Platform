@@ -1,330 +1,192 @@
-# Architecture Documentation
+# Architecture
 
-## Microservices Overview
+The single source of truth for how the platform fits together. If this file disagrees with code in `services/`, `infra/`, or `frontend/`, the code wins and this document must be updated.
 
-This e-commerce platform consists of 10 microservices, each responsible for a specific domain:
-
-| # | Service | Responsibility | Port |
-|---|---------|----------------|------|
-| 1 | API Gateway | Request routing, authentication, rate limiting | 3000 |
-| 2 | Auth Service | User authentication, JWT/refresh token management | 3001 |
-| 3 | User Service | User profile management, addresses | 3002 |
-| 4 | Product Service | Product catalog, categories, inventory | 3003 |
-| 5 | Cart Service | Shopping cart management | 3004 |
-| 6 | Order Service | Order processing, order history | 3005 |
-| 7 | Payment Service | Payment processing, transactions | 3006 |
-| 8 | Notification Service | Email, SMS, push notifications | 3007 |
-| 9 | Search Service | Product search, filtering, suggestions | 3008 |
-| 10 | Admin Service | Admin dashboard, analytics, management | 3009 |
-
----
-
-## Service Communication Diagram
-
-### Synchronous Communication (REST API)
+## System at a glance
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          FRONTEND (React + Vite)                        │
-│                              localhost:5173                            │
-└─────────────────────────────────┬───────────────────────────────────────┘
-                                  │
-                                  │ HTTPS/REST
-                                  ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          API GATEWAY (Port 3000)                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
-│  │   /auth/*   │  │   /users/*  │  │ /products/* │  │   /cart/*   │    │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘    │
-└─────────┼────────────────┼────────────────┼────────────────┼────────────┘
-          │                │                │                │
-          ▼                ▼                ▼                ▼
-    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-    │  Auth    │    │  User    │    │ Product  │    │  Cart    │
-    │ :3001    │    │ :3002    │    │ :3003    │    │ :3004    │
-    └──────────┘    └──────────┘    └──────────┘    └──────────┘
-```
-
-### Asynchronous Communication (RabbitMQ Events)
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        RABBITMQ MESSAGE BROKER                          │
-│                     Exchange: ecommerce.events (topic)                  │
-└─────────────────────────────────┬───────────────────────────────────────┘
-                                  │
-    ┌─────────────────────────────┼─────────────────────────────┐
-    │                             │                             │
-    ▼                             ▼                             ▼
-┌─────────────┐            ┌─────────────┐            ┌─────────────┐
-│   Order     │            │  Payment    │            │Notification │
-│  Service    │───────────▶│  Service    │───────────▶│  Service    │
-│  (Producer) │   event    │  (Consumer) │   event    │ (Consumer)  │
-└─────────────┘            └─────────────┘            └─────────────┘
-        │
-        │ event
-        ▼
-┌─────────────┐
-│   Search    │
-│  Service    │
-│ (Consumer)  │
-└─────────────┘
-```
-
-### Communication Patterns
-
-| Pattern | Use Case | Implementation |
-|---------|----------|----------------|
-| Request-Response | Client to Gateway to Service | REST over HTTP |
-| Service-to-Service | Cross-service queries | REST over HTTP via Gateway |
-| Event-Driven | Async workflows | RabbitMQ pub/sub |
-
----
-
-## Database Per Service Strategy
-
-### Architecture
-
-- **Single PostgreSQL Instance**: One database server
-- **Multiple Schemas**: Each service owns its own schema
-- **Schema Isolation**: Services cannot access other service schemas directly
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│                     PostgreSQL (Port 5432)                     │
-│                        Database: ecommerce                      │
-├──────────┬──────────┬──────────┬──────────┬──────────────────┤
-│  auth    │   user   │ product  │   cart   │      order       │
-│  schema  │  schema  │  schema  │  schema  │      schema      │
-├──────────┼──────────┼──────────┼──────────┼──────────────────┤
-│ users    │ profiles │ products │  items   │    orders        │
-│ sessions │ addresses│ categories│        │ order_items      │
-│          │          │ inventory │        │    payments       │
-└──────────┴──────────┴──────────┴──────────┴──────────────────┘
-```
-
-### Prisma Schema Configuration
-
-Each service configures Prisma with its schema:
-
-```prisma
-// auth-service/prisma/schema.prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["auth"]
-}
-
-// user-service/prisma/schema.prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["user"]
-}
-```
-
----
-
-## API Gateway Routing Plan
-
-### Route Configuration
-
-| Method | Path | Upstream Service | Auth Required |
-|--------|------|------------------|---------------|
-| POST | /api/v1/auth/login | Auth Service (3001) | No |
-| POST | /api/v1/auth/register | Auth Service (3001) | No |
-| POST | /api/v1/auth/refresh | Auth Service (3001) | No |
-| POST | /api/v1/auth/logout | Auth Service (3001) | Yes |
-| GET | /api/v1/users/me | User Service (3002) | Yes |
-| PUT | /api/v1/users/me | User Service (3002) | Yes |
-| GET | /api/v1/users/me/addresses | User Service (3002) | Yes |
-| POST | /api/v1/users/me/addresses | User Service (3002) | Yes |
-| GET | /api/v1/products | Product Service (3003) | No |
-| GET | /api/v1/products/:id | Product Service (3003) | No |
-| GET | /api/v1/products/search | Search Service (3008) | No |
-| GET | /api/v1/cart | Cart Service (3004) | Yes |
-| POST | /api/v1/cart/items | Cart Service (3004) | Yes |
-| PUT | /api/v1/cart/items/:id | Cart Service (3004) | Yes |
-| DELETE | /api/v1/cart/items/:id | Cart Service (3004) | Yes |
-| POST | /api/v1/orders | Order Service (3005) | Yes |
-| GET | /api/v1/orders | Order Service (3005) | Yes |
-| GET | /api/v1/orders/:id | Order Service (3005) | Yes |
-| POST | /api/v1/payments/process | Payment Service (3006) | Yes |
-| GET | /api/v1/payments/:orderId | Payment Service (3006) | Yes |
-| GET | /api/v1/admin/analytics | Admin Service (3009) | Yes (Admin) |
-
-### Gateway Middleware Pipeline
-
-```
-Request → Rate Limit → CORS → Auth Check → Route → Upstream Service
-```
-
-1. **Rate Limiting**: 100 requests/minute per IP
-2. **CORS**: Allow frontend origin
-3. **Authentication**: Validate JWT token
-4. **Routing**: Forward to appropriate service
-
----
-
-## Frontend to Gateway Communication Flow
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         NEXT.JS FRONTEND (3001)                         │
-│                                                                          │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                 │
-│  │   Pages     │    │ Components  │    │   Hooks    │                 │
-│  │  /login     │    │  AuthForm   │    │ useAuth()  │                 │
-│  │  /products  │    │ ProductCard │    │ useCart()  │                 │
-│  │  /cart      │    │  CartItem   │    │useProducts │                 │
-│  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘                 │
-│         │                  │                  │                         │
-│         └──────────────────┼──────────────────┘                         │
-│                            ▼                                            │
-│                   ┌──────────────┐                                       │
-│                   │ API Client   │                                       │
-│                   │  (axios)     │                                       │
-│                   └──────┬───────┘                                       │
-└───────────────────────────┼─────────────────────────────────────────────┘
-                            │ fetch('/api/auth/login', ...)
-                            ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      API GATEWAY (localhost:3000)                        │
-│                                                                          │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐              │
-│  │ Rate Limiter │    │  Auth Check  │    │   Router    │              │
-│  └──────────────┘    └──────────────┘    └──────────────┘              │
-└───────────────────────────┬─────────────────────────────────────────────┘
-                            │ Forward to Auth Service
-                            ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     AUTH SERVICE (localhost:3001)                       │
-│                                                                          │
-│  1. Validate credentials                                                │
-│  2. Generate JWT + Refresh Token                                       │
-│  3. Store session in Redis                                             │
-│  4. Return tokens to Gateway                                           │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Token Storage Flow
-
-1. **Login Success**: Gateway returns JWT + Refresh Token
-2. **Frontend Storage**: 
-   - JWT: Memory (React state) + localStorage backup
-   - Refresh Token: httpOnly cookie (recommended) or localStorage
-3. **Subsequent Requests**: Include JWT in Authorization header
-
----
-
-## JWT Authentication Flow
-
-### Authentication Sequence
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              USER                                       │
-└─────────────────────────────┬───────────────────────────────────────────┘
-                              │ 1. Login (email/password)
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND                                        │
-│                          axios.post('/api/auth/login', {email, password})│
-└─────────────────────────────┬───────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                                                             │
-│                   Rate Limit → Forward API GATEWAY to AUTH                          │
-└─────────────────────────────┬───────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       AUTH SERVICE                                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │
-│  │ Validate    │  │   Check     │  │  Generate   │  │   Store     │  │
-│  │ Credentials │─▶│  User Exists│─▶│    Tokens   │─▶│   Session   │  │
-│  └─────────────┘  └─────────────┘  └─────────────┘  └──────┬──────┘  │
-└─────────────────────────────┬───────────────────────────────┼─────────┘
-                              │                               │
-                              │ JWT + Refresh Token          │ Redis
-                              ▼                               ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND                                        │
-│                                                                          │
-│  - Store JWT in memory/localStorage                                     │
-│  - Store Refresh Token in httpOnly cookie                              │
-│  - Include JWT in subsequent request headers                           │
-└─────────────────────────────┬───────────────────────────────────────────┘
-                              │ 2. Subsequent Request
-                              │ Authorization: Bearer <jwt_token>
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        API GATEWAY                                      │
-│                   Extract JWT → Validate Signature                     │
-└─────────────────────────────┬───────────────────────────────────────────┘
-                              │ Valid
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      TARGET SERVICE                                      │
-│           Extract userId from JWT → Process request                     │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Token Refresh Flow
-
-```
-┌─────────────┐    JWT Expired    ┌─────────────┐
-│   Frontend  │──────────────────▶│ API Gateway │
-└─────────────┘                   └──────┬──────┘
-                                         │
-                                         │ 401 Unauthorized
-                                         ▼
-┌─────────────┐    Refresh Token   ┌─────────────┐
-│   Frontend  │◀───────────────────│ API Gateway │
-└─────────────┘                   └──────┬──────┘
-                                         │
-                                         │ Forward with refresh token
-                                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                         AUTH SERVICE                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Validate   │  │   Check     │  │  Generate   │         │
-│  │Refresh Token│─▶│   Session   │─▶│    New JWT  │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-└────────────────────────────┬────────────────────────────────┘
-                             │ New JWT
+        ┌──────────────────────────────────────────┐
+        │            Frontend (Vite + React)       │
+        │           http://localhost:5173          │
+        └────────────────────┬─────────────────────┘
+                             │ /api/*  (Vite dev proxy → gateway)
                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                         FRONTEND                            │
-│              Retry original request with new JWT            │
-└─────────────────────────────────────────────────────────────┘
+        ┌──────────────────────────────────────────┐
+        │      API Gateway — port 3000             │
+        │  JWT verify · CORS · rate limit · proxy  │
+        └─────┬────────┬─────────┬─────────┬───────┘
+              │        │         │         │
+            auth      user     product    cart    order   payment   notification   search   admin
+            :3001     :3002    :3003     :3004    :3005   :3006      :3007          :3008    :3009
+              │                              │
+              │       ┌──────────────────────────────────┐
+              └────►  │ PostgreSQL 16 — single instance   │
+              │       │ one DB (`ecommerce`), per-service │
+              │       │ schemas (`auth`, `user_service`, │
+              │       │ `product_service`, …)             │
+              │       └──────────────────────────────────┘
+              │
+              ├────► Redis 7  (sessions, login-attempts,
+              │                 cart cache, search cache,
+              │                 idempotency keys,
+              │                 rate-limit counters)
+              │
+              └────► RabbitMQ 3 (topic exchange `ecommerce.events`
+                                  + `product.events`)
 ```
 
-### JWT Structure
+There is **no** `packages/` folder, no Lerna, no Turbo, no monorepo build orchestrator. It's plain npm workspaces over `services/*`. Do not add one without team discussion.
+
+## Services
+
+| # | Service       | Port | DB schema            | Auth required | Responsibility |
+|---|---------------|------|----------------------|---------------|----------------|
+| 1 | gateway       | 3000 | `gateway`            | n/a           | JWT validation, rate limit, CORS, reverse proxy |
+| 2 | auth          | 3001 | `auth`               | no            | Register/login, JWT + refresh tokens, sessions, login attempts |
+| 3 | user          | 3002 | `user_service`       | yes           | Profile, addresses, wishlists, reviews, sellers |
+| 4 | product       | 3003 | `product_service`    | no            | Categories, brands, products, variants, inventory, warehouses |
+| 5 | cart          | 3004 | `cart_service`       | yes           | Active cart, saved carts |
+| 6 | order         | 3005 | `order_schema`       | yes           | Orders, items, status history, shipments, refunds, returns |
+| 7 | payment       | 3006 | `payment_service`    | yes           | Payments, refunds, Stripe webhooks + generic webhook endpoint |
+| 8 | notification  | 3007 | `notification_service` | yes         | Preferences, notifications, email queue, templates |
+| 9 | search        | 3008 | `search_service`     | no            | Product search index (read-side), suggestions, trending, click log |
+| 10 | admin        | 3009 | `admin_service`      | yes (admin)   | Dashboard, manage users/products/orders/settings |
+
+## Gateway routing table
+
+Source of truth: `services/gateway/src/modules/router/router.controller.ts` → `defaultRoutes`.
+
+| Path prefix                  | Upstream service | Auth |
+|------------------------------|------------------|------|
+| `/api/v1/auth`               | auth             | optional |
+| `/api/v1/users`              | user             | yes |
+| `/api/v1/sellers`, `/api/v1/seller` | user       | yes |
+| `/api/v1/products`, `/api/v1/categories`, `/api/v1/brands`, `/api/v1/variants`, `/api/v1/inventory` | product | optional |
+| `/api/v1/carts`, `/api/v1/saved-carts` | cart      | yes |
+| `/api/v1/orders`             | order            | yes |
+| `/api/v1/payments`           | payment          | yes |
+| `/api/v1/notifications`      | notification     | yes |
+| `/api/v1/search`             | search           | optional |
+| `/api/v1/admin`              | admin            | yes |
+| `/api/v1/webhooks`           | payment          | no — verified by service |
+
+Routes prefixed with `/api/v1/auth`, `/api/v1/users`, etc. are matched in order; unknown paths fall through to the DB-driven `routerService.resolveTargetService` (`RouteConfig` model).
+
+Gateway exposes:
+- `GET /health` — liveness.
+- `GET /api/v1/routes` — current routing table.
+- `GET /docs` — list of per-service Swagger UIs.
+
+## Database strategy
+
+- **Single PostgreSQL 16 instance** — one DB (`ecommerce`), one user (`postgres`).
+- **Per-service schema** isolation. Each service scopes itself via `?schema=<schema>` in its `DATABASE_URL`.
+- **Schemas are created at infra bring-up** by `infra/postgres/init-scripts/init-schemas.sql`. The schema list is the contract.
+- **Migrations**: `npx prisma db push` per service in dev. There are no migration files checked in; CI mirrors dev with `prisma db push --accept-data-loss` (see [ADR-0002](adr/0002-migrations.md) for the production migration plan).
+- **No cross-schema reads in business code**. Analytics views in admin are the only documented exception, and they don't exist yet.
+
+### Schema ownership
+
+| Schema               | Service       | Models |
+|----------------------|---------------|--------|
+| `auth`               | auth          | User, Role, UserRole, Session, LoginAttempt |
+| `user_service`       | user          | Profile, Address, Wishlist, WishlistItem, Review, ReviewHelpful |
+| `product_service`    | product       | Category, Brand, Product, ProductVariant, Inventory, Warehouse |
+| `cart_service`       | cart          | Cart, CartItem, SavedCart |
+| `order_schema`       | order         | Order, OrderItem, OrderStatusHistory, Shipment, Refund, Return |
+| `payment_service`    | payment       | Payment, Refund |
+| `notification_service` | notification | NotificationPreference, Notification, NotificationTemplate, EmailQueue |
+| `search_service`     | search        | ProductSearchIndex, SearchLog |
+| `admin_service`      | admin         | AdminLog, SystemSetting |
+| `gateway`            | gateway       | RateLimit, ApiKey, RouteConfig |
+
+## Redis usage
+
+- Sessions and refresh-token bookkeeping (auth service).
+- Per-service caching (cart, product detail, search suggestions) — TTLs are service-local; pick a sensible value and document it in the module that owns the cache.
+- Idempotency keys for payments.
+
+Key namespacing convention: `<service>:<entity>:<id>` (e.g., `cart:cart:<userId>`).
+
+## RabbitMQ
+
+A single topic exchange is currently in active use:
+
+| Exchange          | Routing key pattern | Producers | Consumers | Notes |
+|-------------------|---------------------|-----------|-----------|-------|
+| `product.events`  | `product.*`         | product   | search    | Catalog reindex. |
+
+`payment` and `notification` have `amqplib` declared as a dep with a `rabbitmq.ts` util but no live publish/consume code wired into `index.ts` today.
+
+When you add a new event flow: define the exchange name + routing key here first, then implement the publisher and consumer. Do not invent new exchanges without updating this section.
+
+## Authentication
+
+- **JWT access tokens** — HS256, 15-minute TTL, signed with `JWT_SECRET`.
+- **Refresh tokens** — 7-day TTL, signed with `JWT_REFRESH_SECRET`, persisted as `Session` rows in `auth.sessions`.
+- **Header** — `Authorization: Bearer <token>`.
+- The **gateway validates** the JWT, then forwards `x-user-id`, `x-user-email`, `x-user-role` to downstream services so they don't re-validate.
+- **Failed logins** — `LoginAttempt` rows + a `lockedUntil` window on the user (auth-service implementation).
+
+Token refresh: `POST /api/v1/auth/refresh` (handled by auth service).
+
+## Canonical error shape
+
+Every service throws `AppError(statusCode, errorCode, message[, details])`. Error responses look like:
 
 ```json
 {
-  "header": {
-    "alg": "HS256",
-    "typ": "JWT"
-  },
-  "payload": {
-    "sub": "user-uuid",
-    "email": "user@example.com",
-    "role": "user|admin",
-    "iat": 1700000000,
-    "exp": 1700000900
-  },
-  "signature": "..."
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Email is required",
+    "details": { "field": "email" }
+  }
 }
 ```
 
-### Security Best Practices
+`code` is a stable, machine-readable string. `details` is optional and per-endpoint. Stack traces are never leaked in `message`; they may appear in `error.stack` only when `NODE_ENV !== 'production'`.
 
-1. **Short-lived JWT**: 15 minutes expiration
-2. **Long-lived Refresh Token**: 7 days expiration
-3. **Store in httpOnly cookies** for refresh token
-4. **HTTPS only** in production
-5. **Implement token blacklist** for logout
-6. **Rate limit** auth endpoints
+## Frontend integration
+
+- Vite + React 18 on `:5173`.
+- Axios client in `frontend/src/lib/api.ts` proxies `/api/*` to gateway `:3000` via Vite's dev proxy.
+- JWT in `localStorage` (the api client is auth-header-based; if you switch to httpOnly cookies later, set `withCredentials: true`).
+- Refresh-on-401 interceptor coalesces concurrent refresh attempts into a single `/auth/refresh` call.
+- State: Zustand stores — `auth`, `cart`. Add more stores as features grow.
+
+## Repository layout
+
+```
+.
+├── README.md                ← quick start + service table
+├── PUKU.md                  ← puku-cli session notes
+├── AGENTS.md                ← agent-specific notes
+├── CLAUDE.md                ← Claude Code specific notes
+├── Makefile                 ← canonical command surface
+├── package.json             ← npm workspaces over services/*
+├── infra/                   ← docker-compose, postgres init scripts
+├── services/                ← 10 microservices
+├── frontend/                ← Vite + React
+├── planning/                ← phased build plans
+├── scripts/                 ← api-test.sh and helpers
+└── docs/                    ← architecture, API, operations
+```
+
+## Local development
+
+```bash
+make infra-up        # Postgres + Redis + RabbitMQ (with health waits)
+make setup           # npm install + prisma generate + db push for all services
+make dev-all         # all services + frontend (concurrently)
+```
+
+Per-service:
+
+```bash
+make dev-auth                # one service
+cd services/auth && npm run test -- --testPathPattern="auth.service.test.ts"   # single test file
+cd services/auth && npm run lint:fix                                            # format + lint
+```
+
+Frontend: `cd frontend && npm run dev` (port 5173). Vite proxies `/api` → gateway.

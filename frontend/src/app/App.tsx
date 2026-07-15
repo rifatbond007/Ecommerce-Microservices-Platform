@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
 import { RootLayout } from './layouts/root-layout';
 import { Toaster } from '@/components/ui/toast';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { HomePage } from './pages/home-page';
 import { LoginPage } from './pages/auth/login-page';
 import { RegisterPage } from './pages/auth/register-page';
@@ -34,6 +35,7 @@ import { AdminDashboardPage } from './pages/admin/admin-dashboard-page';
 import { AdminUsersPage } from './pages/admin/admin-users-page';
 import { AdminProductsPage } from './pages/admin/admin-products-page';
 import { AdminOrdersPage } from './pages/admin/admin-orders-page';
+import { NotFoundPage } from './pages/not-found-page';
 
 const pageVariants = {
   initial: { opacity: 0, y: 12 },
@@ -77,11 +79,12 @@ export default function App() {
   }, [checkAuth, fetchCart]);
 
   return (
-    <Toaster>
-      <RootLayout>
-        <AnimatePresence mode="wait">
-          <PageWrap key={location.pathname}>
-            <Routes location={location}>
+    <TooltipProvider delayDuration={150}>
+      <Toaster>
+        <RootLayout>
+          <AnimatePresence mode="wait">
+            <PageWrap key={location.pathname}>
+              <Routes location={location}>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -118,11 +121,12 @@ export default function App() {
               <Route path="/returns" element={<StaticPage slug="returns" />} />
               <Route path="/privacy" element={<StaticPage slug="privacy" />} />
               <Route path="/terms" element={<StaticPage slug="terms" />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </PageWrap>
         </AnimatePresence>
       </RootLayout>
     </Toaster>
+    </TooltipProvider>
   );
 }

@@ -7,13 +7,25 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
 
   database: {
-    url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/ecommerce',
+    url:
+      process.env.DATABASE_URL ||
+      'postgresql://postgres:postgres@localhost:5433/ecommerce?schema=gateway',
   },
 
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || '',
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+  },
+
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  },
+
+  proxy: {
+    timeoutMs: parseInt(process.env.PROXY_TIMEOUT_MS || '30000', 10),
+    proxyTimeoutMs: parseInt(process.env.PROXY_PROXY_TIMEOUT_MS || '30000', 10),
   },
 
   jwt: {

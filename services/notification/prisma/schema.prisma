@@ -8,13 +8,13 @@ datasource db {
 }
 
 model NotificationPreference {
-  id          String  @id @default(uuid())
-  userId      String  @unique @map("user_id")
-  emailEnabled Boolean @default(true) @map("email_enabled")
-  smsEnabled Boolean  @default(false) @map("sms_enabled")
-  pushEnabled Boolean @default(false) @map("push_enabled")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  emailEnabled Boolean  @default(true) @map("email_enabled")
+  smsEnabled   Boolean  @default(false) @map("sms_enabled")
+  pushEnabled  Boolean  @default(false) @map("push_enabled")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("notification_preferences")
 }
@@ -33,11 +33,11 @@ model Notification {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  @@map("notifications")
   @@index([userId])
   @@index([status])
   @@index([type])
   @@index([createdAt])
+  @@map("notifications")
 }
 
 model NotificationTemplate {
@@ -52,31 +52,31 @@ model NotificationTemplate {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("notification_templates")
   @@index([type, channel])
+  @@map("notification_templates")
 }
 
 model EmailQueue {
-  id          String    @id @default(uuid())
-  toEmail     String    @map("to_email")
-  toName      String?   @map("to_name")
-  fromEmail   String    @map("from_email")
-  fromName    String?   @map("from_name")
-  subject     String
-  body        String    @db.Text
-  templateId  String?   @map("template_id")
-  variables   Json      @default("{}")
-  priority    Int       @default(5)
-  retryCount  Int       @default(0) @map("retry_count")
-  maxRetries  Int       @default(3) @map("max_retries")
-  status      String    @default("pending")
-  scheduledAt DateTime? @map("scheduled_at")
-  sentAt      DateTime? @map("sent_at")
-  errorMessage String?  @map("error_message")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id           String    @id @default(uuid())
+  toEmail      String    @map("to_email")
+  toName       String?   @map("to_name")
+  fromEmail    String    @map("from_email")
+  fromName     String?   @map("from_name")
+  subject      String
+  body         String    @db.Text
+  templateId   String?   @map("template_id")
+  variables    Json      @default("{}")
+  priority     Int       @default(5)
+  retryCount   Int       @default(0) @map("retry_count")
+  maxRetries   Int       @default(3) @map("max_retries")
+  status       String    @default("pending")
+  scheduledAt  DateTime? @map("scheduled_at")
+  sentAt       DateTime? @map("sent_at")
+  errorMessage String?   @map("error_message")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  @@map("email_queue")
   @@index([status])
   @@index([priority])
+  @@map("email_queue")
 }

@@ -123,7 +123,7 @@ export class CategoriesService {
       description: category.description,
       parentId: category.parentId,
       isActive: category.isActive,
-      sortOrder: category.sortOrder,
+      sortOrder: category.displayOrder,
       createdAt: category.createdAt,
       updatedAt: category.updatedAt,
       parent: category.parent ? this.formatCategoryResponse(category.parent) : null,
@@ -142,7 +142,7 @@ export class CategoriesService {
         slug: cat.slug,
         description: cat.description,
         isActive: cat.isActive,
-        sortOrder: cat.sortOrder,
+        sortOrder: cat.displayOrder,
         children: [],
         productCount: cat._count?.products || 0,
       });

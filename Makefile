@@ -24,7 +24,7 @@ infra-up: ## Start Docker infra (PostgreSQL, Redis, RabbitMQ) with health checks
 	@echo "Waiting for RabbitMQ..."; \
 	until docker exec ecommerce-rabbitmq rabbitmq-diagnostics check_running 2>/dev/null | grep -q "is running"; do sleep 2; done
 	@echo "Infrastructure ready."
-	@echo "  PostgreSQL: localhost:5432 (postgres/postgres)"
+	@echo "  PostgreSQL: localhost:5433 (postgres/postgres) — host port; container is 5432"
 	@echo "  Redis:      localhost:6379"
 	@echo "  RabbitMQ:   localhost:5672 (guest/guest) | UI: localhost:15672"
 
@@ -71,12 +71,12 @@ test: ## Run all service unit tests (via npm workspaces)
 	npm run test --workspaces --if-present
 
 test-%: ## Test one service (e.g., make test-auth)
-
-api-test: ## Test all live API endpoints through the gateway (requires infra + services up)
-	bash scripts/api-test.sh
 	$(eval _svc := $(subst test-,,$@))
 	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
 	npm run test --workspace=services/$(_svc)
+
+api-test: ## Test all live API endpoints through the gateway (requires infra + services up)
+	bash scripts/api-test.sh
 
 # ── Lint ─────────────────────────────────────────────────────────
 

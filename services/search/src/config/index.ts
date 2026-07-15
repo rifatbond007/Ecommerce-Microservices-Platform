@@ -13,10 +13,17 @@ export const config = {
 
   rabbitmq: {
     url: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
+    exchange: process.env.RABBITMQ_EXCHANGE || 'product.events',
+    queue: process.env.RABBITMQ_QUEUE || 'search.product.index',
+    routingKey: process.env.RABBITMQ_ROUTING_KEY || 'product.*',
+  },
+
+  cache: {
+    suggestionsTtlSeconds: parseInt(process.env.CACHE_TTL_SUGGESTIONS || '120', 10),
   },
 
   cors: {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   },
 
   jwt: {

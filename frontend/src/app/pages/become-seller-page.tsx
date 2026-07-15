@@ -23,7 +23,7 @@ export function BecomeSellerPage() {
       await sellerApi.becomeSeller(form);
       navigate('/seller');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to submit seller application');
+      setError(err.response?.data?.error?.message || 'Failed to submit seller application');
     } finally {
       setSubmitting(false);
     }

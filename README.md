@@ -1,201 +1,139 @@
 # E-Commerce Microservices Platform
 
-A full-featured e-commerce platform built with 10 microservices using Node.js, Express.js, React + Vite, PostgreSQL, Redis, and RabbitMQ.
+A full-featured e-commerce platform built with **10 Node.js / Express microservices** and a **Vite + React** frontend. Per-service PostgreSQL schemas in a single DB, Redis for caching/sessions, RabbitMQ for async events.
 
 ---
 
-## Architecture Overview
+## Quick start
 
+```bash
+make infra-up        # PostgreSQL:5433, Redis:6379, RabbitMQ:5672/15672 (with health waits)
+make setup           # npm install + prisma generate + db push (all services)
+make dev-all         # all 10 services + frontend concurrently (ts-node-dev hot-reload)
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                       Frontend (React + Vite)                       │
-│                           localhost:5173                            │
-└─────────────────────────────────────┬───────────────────────────────┘
-                                      │ HTTPS/REST
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                        API Gateway (Port 3000)                      │
-│               Rate Limiting │ CORS │ JWT Auth │ Routing             │
-└─────────────────────────────────────┬───────────────────────────────┘
-                                      │
-         ┌────────────┬──────────────┼──────────────┬─────────────┐
-         ▼            ▼              ▼              ▼             ▼
-        ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────┐
-        │  Auth   │ │  User   │ │ Product │ │  Cart   │ │  Order   │
-        │  :3001  │ │  :3002  │ │  :3003  │ │  :3004  │ │  :3005   │
-        └─────────┘ └─────────┘ └─────────┘ └─────────┘ └──────────┘
-```
+
+Single service: `make dev-auth` (replace `auth` with any service name).
+Frontend only: `make dev-frontend` → http://localhost:5173
+
+**Node ≥ 20, npm ≥ 10.** Docker required for infra.
 
 ---
 
 ## Services
 
-| # | Service | Port | Database Schema | Description |
-|---|---------|------|----------------|-------------|
-| 1 | API Gateway | 3000 | - | Request routing, authentication, rate limiting |
-| 2 | Auth Service | 3001 | auth | User authentication, JWT/refresh token management |
-| 3 | User Service | 3002 | user_service | User profile management, addresses, reviews |
-| 4 | Product Service | 3003 | product_service | Product catalog, categories, inventory |
-| 5 | Cart Service | 3004 | cart_service | Shopping cart management |
-| 6 | Order Service | 3005 | order_service | Order processing, order history |
-| 7 | Payment Service | 3006 | payment_service | Payment processing, transactions |
-| 8 | Notification Service | 3007 | notification_service | Email, SMS, push notifications |
-| 9 | Search Service | 3008 | search_service | Product search, filtering, suggestions |
-| 10 | Admin Service | 3009 | admin_service | Admin dashboard, analytics, management |
+| # | Service       | Port | DB schema            | Description |
+|---|---------------|------|----------------------|-------------|
+| 1 | gateway       | 3000 | `gateway`            | Routing, JWT verification, rate limit, CORS |
+| 2 | auth          | 3001 | `auth`               | Register/login, JWT + refresh tokens, sessions |
+| 3 | user          | 3002 | `user_service`       | Profile, addresses, wishlists, reviews, sellers |
+| 4 | product       | 3003 | `product_service`    | Categories, brands, products, variants, inventory, warehouses |
+| 5 | cart          | 3004 | `cart_service`       | Active cart, saved carts |
+| 6 | order         | 3005 | `order_schema`       | Orders, items, status history, shipments, refunds, returns |
+| 7 | payment       | 3006 | `payment_service`    | Payments, refunds, Stripe + generic webhooks |
+| 8 | notification  | 3007 | `notification_service` | Preferences, notifications, email queue |
+| 9 | search        | 3008 | `search_service`     | Product search index, suggestions, trending |
+| 10 | admin        | 3009 | `admin_service`      | Dashboard, manage users/products/orders/settings |
+
+Full per-service endpoint catalog → [docs/SERVICE_LIST.md](docs/SERVICE_LIST.md)
 
 ---
 
-## Tech Stack
+## Tech stack
 
-| Category | Technology |
-|----------|------------|
-| Runtime | Node.js 20 LTS |
-| Backend Framework | Express.js |
-| Frontend | React + Vite |
-| Database | PostgreSQL 16 |
-| Cache | Redis 7.2 |
-| Message Broker | RabbitMQ 3.12 |
-| ORM | Prisma 5.x |
-| Authentication | JWT |
+| Layer        | Technology |
+|--------------|------------|
+| Runtime      | Node.js 20 LTS |
+| Backend      | Express.js, TypeScript, Prisma 5 |
+| Frontend     | React 18, Vite, Tailwind, shadcn/ui, Zustand, Axios |
+| Database     | PostgreSQL 16 (per-service schemas) |
+| Cache        | Redis 7.2 |
+| Messaging    | RabbitMQ 3.12 |
+| Auth         | JWT (HS256) access 15m + refresh 7d |
+| Payments     | Stripe (optional — mock provider if `STRIPE_SECRET_KEY` empty) |
 
 ---
 
-## Project Structure
+## Project layout
 
 ```
-ecommerce-microservices/
-├── services/              # All microservices
-│   ├── auth/           # Auth Service (TypeScript, Prisma)
-│   ├── user/          # User Service (TypeScript, Prisma)
-│   ├── product/       # Product Service
-│   ├── cart/          # Cart Service
-│   ├── order/         # Order Service
-│   ├── payment/      # Payment Service
-│   ├── notification/  # Notification Service
-│   ├── search/        # Search Service
-│   └── admin/         # Admin Service
-├── frontend/           # Next.js frontend
-├── infra/              # Infrastructure (Docker Compose)
-├── docs/              # Detailed documentation
-└── README.md          # This file
+.
+├── README.md                ← you are here
+├── Makefile                 ← canonical command surface (make help for full list)
+├── package.json             ← npm workspaces over services/*
+├── infra/                   ← docker-compose, postgres init, rabbitmq definitions
+├── services/                ← 10 microservices (gateway, auth, user, product, cart,
+│                              order, payment, notification, search, admin)
+├── frontend/                ← Vite + React
+├── planning/                ← phased build plans
+├── scripts/                 ← api-test.sh and helpers
+└── docs/                    ← architecture, API, operations, ADRs
+```
+
+Per-service layout (identical for all 10):
+```
+services/<name>/
+├── src/{index,app}.ts
+├── src/{config,middleware,repositories,routes,utils}/
+├── src/modules/<feature>/{controller,service,route,validator,middleware,types,index}.ts
+├── tests/*.test.ts
+└── prisma/schema.prisma
 ```
 
 ---
 
-## Quick Start
+## Commands
 
-### Prerequisites
+The Makefile is the canonical command surface. Run `make help` for the full list.
 
-| Tool | Version | Command |
-|------|--------|---------|
-| Node.js | 20 LTS | `node --version` |
-| npm | 10.x | `npm --version` |
-| Docker | 24.x | `docker --version` |
-| Docker Compose | 2.24.x | `docker-compose --version` |
+| Command                              | What it does |
+|--------------------------------------|--------------|
+| `make infra-up` / `infra-down`       | Start/stop Postgres + Redis + RabbitMQ (with health waits) |
+| `make setup` / `make setup-auth`     | Install + `prisma generate` + `db push` for one or all services |
+| `make dev-all` / `make dev-<name>`   | Start all services or one (also `make dev-frontend`) |
+| `make test` / `make test-auth`       | Run tests for all or one service |
+| `make lint` / `make lint-auth`       | ESLint all or one service |
+| `make build` / `make build-auth`     | `tsc` build for all or one service |
+| `make api-test`                      | `scripts/api-test.sh` — full live walk-through against the gateway |
+| `make docker-build-all DOCKER_TAG=v1.0` | Build all Docker images |
+| `make docker-up` / `docker-down`     | Start/stop full stack in Compose |
+| `make stop`                          | Kill all dev processes (keep infra) |
+| `make clean`                         | Stop everything (services + infra) |
 
-### 1. Start Infrastructure
-
+Single test file:
 ```bash
-cd infra
-docker-compose up -d
+cd services/auth && npm run test -- --testPathPattern="auth.service.test.ts"
 ```
-
-### 2. Setup Services
-
-```bash
-# Each service needs:
-cd services/<service-name>
-cp .env.example .env
-npm install
-npx prisma generate
-npx prisma db push
-npm run dev
-```
-
-### 3. Service URLs
-
-| Service | URL |
-|--------|-----|
-| Frontend | http://localhost:5173 |
-| API Gateway | http://localhost:3000 |
-| RabbitMQ Management | http://localhost:15672 |
-| PostgreSQL | localhost:5432 |
-| Redis | localhost:6379 |
-
----
-
-## Implemented Services
-
-### Auth Service (`services/auth`)
-
-- User registration/login
-- JWT access tokens (15min) + refresh tokens (7 days)
-- Session management
-- Password reset flow
-- Email verification
-
-**API Endpoints:**
-| Method | Endpoint | Auth |
-|--------|----------|------|
-| POST | `/api/v1/auth/register` | No |
-| POST | `/api/v1/auth/login` | No |
-| POST | `/api/v1/auth/refresh` | No |
-| POST | `/api/v1/auth/logout` | Yes |
-| GET | `/api/v1/auth/me` | Yes |
-
-### User Service (`services/user`)
-
-- Profile management
-- Address management (shipping/billing)
-- Wishlists
-- Product reviews
-
-**API Endpoints:**
-| Method | Endpoint | Auth |
-|--------|----------|------|
-| GET/POST/PUT | `/api/v1/profiles` | Yes |
-| GET/POST/PUT/DELETE | `/api/v1/addresses/:id` | Yes |
-| GET/POST | `/api/v1/wishlists` | Yes |
-| GET/POST | `/api/v1/reviews` | Yes |
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Service communication, database per service strategy |
-| [docs/FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md) | Project structure, code patterns |
-| [docs/SERVICE_LIST.md](docs/SERVICE_LIST.md) | Detailed service information |
-| [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Database tables and relationships |
-| [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | Docker, environment setup |
-| [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) | Security, scalability, API contracts |
+| Doc                                          | What it covers |
+|----------------------------------------------|----------------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System diagram, service catalog, gateway routing, DB strategy, RabbitMQ topology, auth, error envelope |
+| [docs/SERVICE_LIST.md](docs/SERVICE_LIST.md) | Per-service responsibilities and HTTP endpoint catalog |
+| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | Cross-cutting API contracts: pagination, idempotency, auth flow, webhooks |
+| [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Per-service schemas, ER overview, indexes |
+| [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | Docker Compose, env vars, secrets, RabbitMQ topology |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md)           | Day-2 operations, common incidents, debugging steps |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Branching, commits, PR review, code style |
+| [docs/adr/](docs/adr/)                       | Architecture Decision Records |
+
+Tool/agent notes (not user docs — keep these too):
+- `PUKU.md`, `PUKU.local.md` — puku-cli session notes
+- `AGENTS.md` — generic agent notes
+- `CLAUDE.md` — Claude Code specific notes
 
 ---
 
-## Contribution Guidelines
+## Contributing
 
-### Branch Naming
+- **Never commit directly to `main`.** Open a PR even for tiny fixes.
+- Branch naming: `feat/<scope>-<short-desc>`, `fix/<scope>-<short-desc>`, `docs/...`, `refactor/...`.
+- Commits: `<type>(<scope>): <subject>` — `feat(auth): …`, `fix(cart): …`, etc.
+- PR must pass CI: lint, typecheck (build), tests, frontend build, api-test.
 
-| Type | Example |
-|------|---------|
-| Feature | `feature/add-user-avatars` |
-| Bug Fix | `fix/cart-item-quantity` |
-| Documentation | `docs/api-endpoints` |
-| Refactor | `refactor/auth-service-cleanup` |
-
-### Commit Message Format
-
-```
-<type>(<scope>): <subject>
-
-# Examples:
-feat(auth): add refresh token endpoint
-fix(cart): resolve quantity update bug
-docs(readme): update installation steps
-```
-
-**Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for full guidelines.
 
 ---
 

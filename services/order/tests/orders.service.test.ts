@@ -34,6 +34,7 @@ jest.mock('../src/config', () => ({
   config: {
     cartService: { url: 'http://localhost:3004' },
     authService: { url: 'http://localhost:3001' },
+    tax: { rate: 0.1 },
   },
 }));
 

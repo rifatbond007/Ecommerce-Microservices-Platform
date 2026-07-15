@@ -17,10 +17,10 @@ model AdminLog {
   ipAddress  String?  @map("ip_address")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  @@map("admin_logs")
   @@index([entityType, entityId])
   @@index([userId])
   @@index([createdAt])
+  @@map("admin_logs")
 }
 
 model SystemSetting {

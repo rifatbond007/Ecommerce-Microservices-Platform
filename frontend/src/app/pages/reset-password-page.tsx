@@ -42,7 +42,7 @@ export function ResetPasswordPage() {
       toast({ title: 'Password reset', description: 'Your password has been changed successfully', variant: 'success' });
       navigate('/login');
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Failed to reset password';
+      const message = err.response?.data?.error?.message || 'Failed to reset password';
       setError(message);
       toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {

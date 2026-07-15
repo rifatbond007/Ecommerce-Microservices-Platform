@@ -8,13 +8,23 @@ x-common-env: &common-env
   RATE_LIMIT_MAX_REQUESTS: 100
   LOG_LEVEL: info
   ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!Change-me}
   FRONTEND_URL: http://localhost:5173
+  CORS_ORIGIN: http://localhost:5173
 
 x-redis-env: &redis-env
   REDIS_URL: redis://redis:6379
 
 x-rabbitmq-env: &rabbitmq-env
   RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+
+x-rabbitmq-product-env: &rabbitmq-product-env
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+  RABBITMQ_EXCHANGE: product.events
+
+x-rabbitmq-ecom-env: &rabbitmq-ecom-env
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+  RABBITMQ_EXCHANGE: ecommerce.events
 
 x-service-urls: &service-urls
   AUTH_SERVICE_URL: http://auth:3001
@@ -77,6 +87,7 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_running"]
@@ -92,6 +103,7 @@ services:
       context: ../services/gateway
       dockerfile: Dockerfile
     container_name: ecommerce-gateway
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
@@ -100,10 +112,16 @@ services:
       SERVICE_NAME: api-gateway
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=gateway
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     networks:
       - ecommerce-network
 
@@ -112,6 +130,7 @@ services:
       context: ../services/auth
       dockerfile: Dockerfile
     container_name: ecommerce-auth
+    restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
@@ -119,9 +138,20 @@ services:
       PORT: 3001
       SERVICE_NAME: auth-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=auth
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@ecommerce.local}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - ecommerce-network
 
@@ -130,6 +160,7 @@ services:
       context: ../services/user
       dockerfile: Dockerfile
     container_name: ecommerce-user
+    restart: unless-stopped
     ports:
       - "3002:3002"
     environment:
@@ -140,7 +171,12 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-      rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - ecommerce-network
 
@@ -149,10 +185,11 @@ services:
       context: ../services/product
       dockerfile: Dockerfile
     container_name: ecommerce-product
+    restart: unless-stopped
     ports:
       - "3003:3003"
     environment:
-      <<: [*common-env, *redis-env, *rabbitmq-env, *service-urls]
+      <<: [*common-env, *redis-env, *rabbitmq-product-env, *service-urls]
       PORT: 3003
       SERVICE_NAME: product-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=product_service
@@ -160,6 +197,12 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - ecommerce-network
 
@@ -168,16 +211,24 @@ services:
       context: ../services/cart
       dockerfile: Dockerfile
     container_name: ecommerce-cart
+    restart: unless-stopped
     ports:
       - "3004:3004"
     environment:
-      <<: [*common-env, *redis-env, *service-urls]
+      <<: [*common-env, *redis-env, *rabbitmq-ecom-env, *service-urls]
       PORT: 3004
       SERVICE_NAME: cart-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=cart_service
+      TAX_RATE: "0.10"
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - ecommerce-network
 
@@ -186,17 +237,25 @@ services:
       context: ../services/order
       dockerfile: Dockerfile
     container_name: ecommerce-order
+    restart: unless-stopped
     ports:
       - "3005:3005"
     environment:
-      <<: [*common-env, *redis-env, *rabbitmq-env, *service-urls]
+      <<: [*common-env, *redis-env, *rabbitmq-ecom-env, *service-urls]
       PORT: 3005
       SERVICE_NAME: order-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=order_schema
+      TAX_RATE: "0.10"
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - ecommerce-network
 
@@ -205,19 +264,26 @@ services:
       context: ../services/payment
       dockerfile: Dockerfile
     container_name: ecommerce-payment
+    restart: unless-stopped
     ports:
       - "3006:3006"
     environment:
-      <<: [*common-env, *rabbitmq-env, *service-urls]
+      <<: [*common-env, *rabbitmq-ecom-env, *service-urls]
       PORT: 3006
       SERVICE_NAME: payment-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=payment_service
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_replace_in_production}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - ecommerce-network
 
@@ -226,22 +292,29 @@ services:
       context: ../services/notification
       dockerfile: Dockerfile
     container_name: ecommerce-notification
+    restart: unless-stopped
     ports:
       - "3007:3007"
     environment:
-      <<: [*common-env, *rabbitmq-env, *service-urls]
+      <<: [*common-env, *rabbitmq-ecom-env, *service-urls]
       PORT: 3007
       SERVICE_NAME: notification-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=notification_service
-      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_HOST: ${EMAIL_HOST:-}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USER: ${EMAIL_USER:-}
       EMAIL_PASS: ${EMAIL_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-noreply@ecommerce.local}
-      APP_URL: ${APP_URL:-http://localhost:3000}
+      APP_URL: ${APP_URL:-http://localhost:5173}
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3007/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - ecommerce-network
 
@@ -250,16 +323,25 @@ services:
       context: ../services/search
       dockerfile: Dockerfile
     container_name: ecommerce-search
+    restart: unless-stopped
     ports:
       - "3008:3008"
     environment:
-      <<: [*common-env, *rabbitmq-env, *service-urls]
+      <<: [*common-env, *rabbitmq-product-env, *service-urls]
       PORT: 3008
       SERVICE_NAME: search-service
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ecommerce?schema=search_service
+      RABBITMQ_QUEUE: search.product.index
+      RABBITMQ_ROUTING_KEY: "product.*"
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - ecommerce-network
 
@@ -268,6 +350,7 @@ services:
       context: ../services/admin
       dockerfile: Dockerfile
     container_name: ecommerce-admin
+    restart: unless-stopped
     ports:
       - "3009:3009"
     environment:
@@ -278,6 +361,27 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3009/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - ecommerce-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: ecommerce-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    environment:
+      API_BASE_URL: http://gateway:3000
+    depends_on:
+      - gateway
     networks:
       - ecommerce-network
 
