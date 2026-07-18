@@ -52,19 +52,32 @@ prisma/schema.prisma
 
 Import alias: `@/*` → `src/`. Error format: `{ success: false, error: { code, message, details? } }` using `AppError(statusCode, errorCode, message)`.
 
+## Prisma gotcha
+
+`@prisma/client` is hoisted to root `node_modules` (npm workspaces). The last service to run `prisma generate` "wins". When building or testing one service in isolation, always regenerate first:
+```
+cd services/<name> && npx prisma generate
+```
+Or use `make setup-<name>` which does install + generate + push in one step. CI does this explicitly in a loop (see `.github/workflows/ci.yml` typecheck job).
+
 ## Tests
 
 - Jest + ts-jest, `tests/` dir, `**/*.test.ts`
 - Inline `jest.mock()` at module level, dynamic `await import()` inside `it()`
 - All jest configs: `isolatedModules: true`
-- 6 services have `tsconfig.test.json` (extend tsconfig, `strict: false`): auth, user, cart, payment, notification, search. Missing: gateway, product, order, admin.
+- **Unit tests mock the DB layer** — no Postgres needed for `npm run test`
+- 6 services have `tsconfig.test.json` (extends tsconfig, `strict: false`): auth, user, cart, payment, notification, search. Missing: gateway, product, order, admin.
 - Test one file: `npm run test -- --testPathPattern="auth.service.test.ts"` (from service dir)
 
 ## Frontend
 
 `frontend/` — Vite+React 18 (NOT Next.js despite docs/ saying so). `npm run dev` on `:5173`. Build: `tsc && vite build`. Vite proxies `/api` → `localhost:3000` (gateway).
 
-Tech: react-router-dom, Zustand, Tailwind, shadcn/ui (Radix), Axios.
+Tech: react-router-dom, Zustand, Tailwind, shadcn/ui (Radix), Axios, framer-motion.
+
+## CI
+
+`.github/workflows/ci.yml` runs on push/PR to main: **lint** → **typecheck** (build, services one-at-a-time with prisma generate before each) → **test** (unit, no DB) → **frontend build** → **api-test** (full stack, depends on typecheck+test).
 
 ## RabbitMQ
 
@@ -74,6 +87,4 @@ Only `search` has a live consumer (`src/events/rabbitmq.service.ts` wired in `ap
 
 - `packages/` in workspace config (`package.json` workspaces) but directory does not exist
 - All services have `.env.example`; `make setup` auto-copies it to `.env`
-- No CI workflows (no `.github/workflows/`)
-- `docs/` (9 files, ~5000 lines) is aspirational: references non-existent `packages/`, wrong creds (`ecommerce/ecommerce_dev_password` — actual: `postgres/postgres`). Use code as source of truth.
-- Also see `CLAUDE.md` (similar content, Claude Code specific)
+- `docs/` (9 files) is aspirational: references non-existent `packages/`, wrong creds (`ecommerce/ecommerce_dev_password` — actual: `postgres/postgres`). Use code as source of truth.
