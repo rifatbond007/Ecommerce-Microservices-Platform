@@ -2,9 +2,7 @@
 
 ## Docker Compose
 
-`infra/docker-compose.yml` runs the full stack. Local dev uses just `make infra-up` to start the three infra services (Postgres, Redis, RabbitMQ), then `make dev-all` for the apps.
-
-`make docker-up` starts the full stack — infra + every service + frontend.
+`infra/docker-compose.yml` runs infrastructure only (Postgres, Redis, RabbitMQ). Local dev uses `make infra-up` to start the three infra services, then `make dev-all` for the apps.
 
 ### Services
 
@@ -13,19 +11,6 @@
 | postgres   | postgres:16-alpine             | 5433      | One DB `ecommerce`, schemas created at init |
 | redis      | redis:7-alpine                 | 6379      | AOF + RDB persistence |
 | rabbitmq   | rabbitmq:3-management-alpine   | 5672/15672 | Topology loaded from `infra/rabbitmq/definitions.json` |
-| gateway    | local build (`services/gateway`)   | 3000 | Depends on infra only |
-| auth       | local build                      | 3001 | |
-| user       | local build                      | 3002 | |
-| product    | local build                      | 3003 | |
-| cart       | local build                      | 3004 | |
-| order      | local build                      | 3005 | |
-| payment    | local build                      | 3006 | |
-| notification | local build                  | 3007 | |
-| search     | local build                      | 3008 | |
-| admin      | local build                      | 3009 | |
-| frontend   | local build (`frontend/`)        | 5173 | Nginx-served Vite build, proxies `/api/*` to gateway |
-
-All service images are multi-stage `node:20-alpine` → runtime `node:20-alpine`. They run as a non-root user (`appuser`, UID 1001).
 
 ### Healthchecks
 
@@ -106,12 +91,11 @@ EMAIL_FROM=...
 
 - [ ] Pin all images by digest (not `alpine`).
 - [ ] Run as non-root in every container.
-- [ ] Add `read_only: true` and `cap_drop: ALL` to every service.
-- [ ] Add `restart: unless-stopped` (Compose already does for our services).
-- [ ] Add `mem_limit` / `cpus` per service.
+- [ ] Add `read_only: true` and `cap_drop: ALL` to infrastructure containers.
+- [ ] Add `restart: unless-stopped` to infrastructure containers.
+- [ ] Add `mem_limit` / `cpus` per infrastructure container.
 - [ ] Move Postgres secrets into Docker secrets.
 - [ ] Add a TLS-terminating reverse proxy in front of the gateway.
 - [ ] Enable RabbitMQ heartbeat + dead-letter queues.
 - [ ] Backups (see [RUNBOOK.md](RUNBOOK.md)).
-- [ ] Health-check HTTP probes for services (currently `wget`, can move to `curl` for prod images).
 - [ ] Resource limits in production docker-compose override.

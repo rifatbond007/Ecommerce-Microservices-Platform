@@ -59,3 +59,4 @@ tests/**/*.d.ts.map
 *.pem
 *.key
 *.crt
+prisma/generated/

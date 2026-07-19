@@ -94,8 +94,6 @@ The Makefile is the canonical command surface. Run `make help` for the full list
 | `make lint` / `make lint-auth`       | ESLint all or one service |
 | `make build` / `make build-auth`     | `tsc` build for all or one service |
 | `make api-test`                      | `scripts/api-test.sh` — full live walk-through against the gateway |
-| `make docker-build-all DOCKER_TAG=v1.0` | Build all Docker images |
-| `make docker-up` / `docker-down`     | Start/stop full stack in Compose |
 | `make stop`                          | Kill all dev processes (keep infra) |
 | `make clean`                         | Stop everything (services + infra) |
 

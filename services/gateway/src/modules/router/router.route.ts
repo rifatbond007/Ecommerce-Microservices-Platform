@@ -35,7 +35,7 @@ const setupRoutes = () => {
 
   router.use((req: Request, res: Response, next: NextFunction) => {
     const resolved = routerService.resolveTargetService(req.path, req.method);
-    
+
     if (!resolved) {
       next();
       return;
@@ -54,6 +54,28 @@ const setupRoutes = () => {
 
 setupRoutes();
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Gateway health check
+ *     tags: [Gateway]
+ *     responses:
+ *       200:
+ *         description: API Gateway is running
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 router.get('/health', (req: Request, res: Response) => {
   res.json({
     success: true,
@@ -62,6 +84,25 @@ router.get('/health', (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @swagger
+ * /routes:
+ *   get:
+ *     summary: List all registered routes
+ *     tags: [Gateway]
+ *     responses:
+ *       200:
+ *         description: List of all registered routes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ */
 router.get('/routes', (req: Request, res: Response) => {
   res.json({
     success: true,
