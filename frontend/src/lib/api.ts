@@ -156,7 +156,7 @@ export const userApi = {
     api.post(`/users/me/wishlists/${wishlistId}/items`, { productId }),
   removeWishlistItem: (wishlistId: string, productId: string) =>
     api.delete(`/users/me/wishlists/${wishlistId}/items/${productId}`),
-  getReviews: (productId: string) => api.get(`/users/reviews/product/${productId}`),
+  getReviews: (productId: string) => api.get(`/users/me/reviews/product/${productId}`),
   createReview: (data: { productId: string; rating: number; title?: string; comment?: string }) =>
     api.post('/users/me/reviews', data),
   markReviewHelpful: (id: string) => api.post(`/users/me/reviews/${id}/helpful`),
@@ -206,8 +206,8 @@ export const orderApi = {
   updateOrderStatus: (id: string, status: string) =>
     api.put(`/orders/${id}/status`, { status }),
   cancelOrder: (id: string) => api.post(`/orders/${id}/cancel`),
-  requestReturn: (id: string, reason: string) =>
-    api.post(`/orders/${id}/return`, { reason }),
+  requestReturn: (id: string, data: { orderItemId: string; quantity: number; reason: string }) =>
+    api.post(`/orders/${id}/return`, data),
 };
 
 export const paymentApi = {

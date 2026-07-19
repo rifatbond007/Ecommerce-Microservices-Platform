@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { orderApi, api } from '@/lib/api';
+import { orderApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, CreditCard, MapPin, ArrowLeft, Package, Truck, RotateCcw } from 'lucide-react';
 
 interface OrderItem {
+  id: string;
   product: { id: string; name: string; images: string[]; price: number };
   quantity: number;
   price: number;
@@ -91,6 +92,8 @@ export function OrderDetailPage() {
   const [returning, setReturning] = useState(false);
   const [returnError, setReturnError] = useState('');
   const [returnSuccess, setReturnSuccess] = useState('');
+  const [returnItemId, setReturnItemId] = useState('');
+  const [returnQuantity, setReturnQuantity] = useState(1);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -122,6 +125,10 @@ export function OrderDetailPage() {
   };
 
   const handleReturn = useCallback(async () => {
+    if (!returnItemId) {
+      setReturnError('Please select an item to return');
+      return;
+    }
     if (!returnReason.trim()) {
       setReturnError('Please provide a reason for return');
       return;
@@ -130,7 +137,11 @@ export function OrderDetailPage() {
     setReturnError('');
     setReturnSuccess('');
     try {
-      await api.post(`/orders/${id}/return`, { reason: returnReason });
+      await orderApi.requestReturn(id!, {
+        orderItemId: returnItemId,
+        quantity: returnQuantity,
+        reason: returnReason,
+      });
       setReturnSuccess('Return request submitted successfully');
       setReturnDialogOpen(false);
     } catch {
@@ -138,7 +149,7 @@ export function OrderDetailPage() {
     } finally {
       setReturning(false);
     }
-  }, [id, returnReason]);
+  }, [id, returnItemId, returnQuantity, returnReason]);
 
   if (loading) return <OrderDetailSkeleton />;
 
@@ -361,6 +372,43 @@ export function OrderDetailPage() {
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="returnItem">Item to return</Label>
+                      <select
+                        id="returnItem"
+                        value={returnItemId}
+                        onChange={e => {
+                          setReturnItemId(e.target.value);
+                          const item = order.items.find(i => i.id === e.target.value);
+                          if (item) setReturnQuantity(1);
+                        }}
+                        className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">Select an item...</option>
+                        {order.items.map(item => (
+                          <option key={item.id} value={item.id}>
+                            {item.product.name} (Qty: {item.quantity})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {returnItemId && (() => {
+                      const item = order.items.find(i => i.id === returnItemId);
+                      if (!item) return null;
+                      return (
+                        <div className="space-y-2">
+                          <Label htmlFor="returnQty">Quantity</Label>
+                          <Input
+                            id="returnQty"
+                            type="number"
+                            min={1}
+                            max={item.quantity}
+                            value={returnQuantity}
+                            onChange={e => setReturnQuantity(Math.max(1, Math.min(item.quantity, parseInt(e.target.value) || 1)))}
+                          />
+                        </div>
+                      );
+                    })()}
                     <div className="space-y-2">
                       <Label htmlFor="returnReason">Reason for return</Label>
                       <Input

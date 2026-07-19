@@ -6,8 +6,7 @@ SHELL   := /bin/bash
 
 .PHONY: help infra-up infra-down infra-status dev dev-all dev-% \
         test test-% api-test lint lint-% build build-% install-% stop clean \
-        setup setup-% docker-build-all docker-build-% \
-        docker-build-frontend docker-up docker-down
+        setup setup-%
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -97,34 +96,6 @@ build-%: ## Build one service (e.g., make build-auth)
 	$(eval _svc := $(subst build-,,$@))
 	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
 	npm run build --workspace=services/$(_svc)
-
-# ── Docker ───────────────────────────────────────────────────────
-
-DOCKER_TAG ?= latest
-
-docker-build-all: ## Build Docker images for all services + frontend. Override tag: DOCKER_TAG=v1.0
-	@set -e; \
-	for svc in $(SERVICES); do \
-		echo "=== Building ecommerce/$$svc:$(DOCKER_TAG) ==="; \
-		docker build -t ecommerce/$$svc:$(DOCKER_TAG) services/$$svc; \
-	done; \
-	echo "=== Building ecommerce/frontend:$(DOCKER_TAG) ==="; \
-	docker build -t ecommerce/frontend:$(DOCKER_TAG) $(FRONTEND_DIR); \
-	echo "All images built."
-
-docker-build-%: ## Build one service Docker image (e.g., make docker-build-auth)
-	$(eval _svc := $(subst docker-build-,,$@))
-	@$(if $(filter $(_svc),$(SERVICES)),,echo "Unknown: $(_svc). Valid: $(SERVICES)" && exit 1)
-	docker build -t ecommerce/$(_svc):$(DOCKER_TAG) services/$(_svc)
-
-docker-build-frontend: ## Build frontend Docker image
-	docker build -t ecommerce/frontend:$(DOCKER_TAG) $(FRONTEND_DIR)
-
-docker-up: infra-up ## Start full stack (infra + all services)
-	cd $(INFRA_DIR) && docker compose up -d
-
-docker-down: ## Stop full stack (infra + services)
-	cd $(INFRA_DIR) && docker compose down --remove-orphans
 
 # ── Cleanup ──────────────────────────────────────────────────────
 
