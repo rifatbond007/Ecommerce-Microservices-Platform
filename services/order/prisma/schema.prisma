@@ -45,6 +45,8 @@ model Order {
   @@index([fulfillmentStatus])
   @@index([financialStatus])
   @@index([createdAt])
+  // Hot path: "my orders" list paginated by recency (most frequent authenticated read).
+  @@index([userId, createdAt(sort: Desc)], map: "idx_orders_user_id_created_at")
   @@map("orders")
 }
 
