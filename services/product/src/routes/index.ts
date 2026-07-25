@@ -4,6 +4,7 @@ import categoriesRoutes from '../modules/categories/categories.route';
 import brandsRoutes from '../modules/brands/brands.route';
 import variantsRoutes from '../modules/variants/variants.route';
 import inventoryRoutes from '../modules/inventory/inventory.route';
+import { adminRoutes } from '../modules/admin';
 
 export {
   productsRoutes,
@@ -11,11 +12,13 @@ export {
   brandsRoutes,
   variantsRoutes,
   inventoryRoutes,
+  adminRoutes,
 };
 
 const router = Router();
 
 router.use('/products', productsRoutes);
+router.use('/products/admin', adminRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/brands', brandsRoutes);
 router.use('/variants', variantsRoutes);
