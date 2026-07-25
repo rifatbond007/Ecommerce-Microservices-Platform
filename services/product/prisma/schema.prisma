@@ -131,6 +131,8 @@ model Inventory {
   @@index([productId], map: "idx_inventories_product_id")
   @@index([variantId], map: "idx_inventories_variant_id")
   @@index([warehouseId], map: "idx_inventories_warehouse_id")
+  // Low-stock alerts scan: WHERE warehouseId=? AND quantity <= reorderPoint.
+  @@index([warehouseId, quantity], map: "idx_inventories_warehouse_quantity")
   @@map("inventories")
 }
 
