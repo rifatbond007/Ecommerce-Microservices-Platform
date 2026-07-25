@@ -112,5 +112,7 @@ model ReviewHelpful {
   review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@unique([reviewId, userId])
+  // "Did the current user vote helpful on this review?" reverse lookup.
+  @@index([userId], map: "idx_review_helpful_user_id")
   @@map("review_helpful")
 }

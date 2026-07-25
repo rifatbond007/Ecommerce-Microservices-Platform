@@ -30,6 +30,8 @@ model Payment {
   @@index([userId])
   @@index([status])
   @@index([paymentIntentId])
+  // Admin reconciliation / status dashboards filter by status in date order.
+  @@index([status, createdAt(sort: Desc)], map: "idx_payments_status_created_at")
   @@map("payments")
 }
 

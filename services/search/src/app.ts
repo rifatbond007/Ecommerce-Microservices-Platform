@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -7,6 +7,8 @@ import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
+import { prisma } from './repositories/prisma.client';
+import { createHealthChecks } from './utils/health';
 
 export const createApp = (): Application => {
   const app: Application = express();
@@ -39,9 +41,16 @@ export const createApp = (): Application => {
   });
   app.use('/api', limiter);
 
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', service: config.serviceName });
+  // /live = process-up only (LB restart decisions).
+  // /ready = deep check; pings Postgres, returns 503 on failure (LB routing).
+  // /health = alias of /ready, kept for existing probes.
+  const { liveness, readiness, health } = createHealthChecks({
+    serviceName: config.serviceName,
+    deps: { prisma },
   });
+  app.get('/live', liveness);
+  app.get('/ready', readiness);
+  app.get('/health', health);
 
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
