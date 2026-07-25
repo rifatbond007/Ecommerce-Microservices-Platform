@@ -43,5 +43,7 @@ model SearchLog {
   @@index([query])
   @@index([createdAt])
   @@index([userId])
+  // User search history (reverse-chronological).
+  @@index([userId, createdAt(sort: Desc)], map: "idx_search_logs_user_id_created_at")
   @@map("search_logs")
 }

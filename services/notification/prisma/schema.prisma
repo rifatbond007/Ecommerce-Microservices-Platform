@@ -37,6 +37,8 @@ model Notification {
   @@index([status])
   @@index([type])
   @@index([createdAt])
+  // Inbox: WHERE userId=? AND readAt IS NULL ORDER BY createdAt DESC.
+  @@index([userId, readAt, createdAt(sort: Desc)], map: "idx_notifications_user_unread")
   @@map("notifications")
 }
 
@@ -78,5 +80,7 @@ model EmailQueue {
 
   @@index([status])
   @@index([priority])
+  // Email worker poll: WHERE status='pending' ORDER BY priority, scheduledAt.
+  @@index([status, priority, scheduledAt], map: "idx_email_queue_status_priority_scheduled")
   @@map("email_queue")
 }
