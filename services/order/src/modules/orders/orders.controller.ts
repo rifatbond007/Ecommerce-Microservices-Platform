@@ -13,11 +13,13 @@ export class OrdersController {
 
       res.status(200).json({
         success: true,
-        data: orders,
-        pagination: {
-          total,
-          limit,
-          offset,
+        data: {
+          orders,
+          pagination: {
+            total,
+            limit,
+            offset,
+          },
         },
       });
     } catch (error) {

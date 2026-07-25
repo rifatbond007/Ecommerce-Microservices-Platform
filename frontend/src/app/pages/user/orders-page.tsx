@@ -23,14 +23,15 @@ interface Order {
   items: OrderItem[];
 }
 
-const STATUSES = ['All', 'Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'] as const;
+const STATUSES = ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
 
 const statusBadgeVariant: Record<string, 'warning' | 'default' | 'secondary' | 'success' | 'destructive'> = {
-  Pending: 'warning',
-  Processing: 'default',
-  Shipped: 'secondary',
-  Delivered: 'success',
-  Cancelled: 'destructive',
+  pending: 'warning',
+  confirmed: 'default',
+  processing: 'secondary',
+  shipped: 'secondary',
+  delivered: 'success',
+  cancelled: 'destructive',
 };
 
 function OrdersSkeleton() {
@@ -83,7 +84,7 @@ export function OrdersPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = activeStatus === 'All'
+  const filtered = activeStatus === 'all'
     ? orders
     : orders.filter(o => o.status === activeStatus);
 
@@ -118,7 +119,7 @@ export function OrdersPage() {
               onClick={() => setActiveStatus(s)}
               className="whitespace-nowrap rounded-full transition-all"
             >
-              {s}
+              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
             </Button>
           </motion.div>
         ))}
@@ -126,14 +127,14 @@ export function OrdersPage() {
 
       {filtered.length === 0 ? (
         <EmptyState
-          icon={activeStatus === 'All'
+          icon={activeStatus === 'all'
             ? <Package className="h-12 w-12" />
             : <ShoppingBag className="h-12 w-12" />}
-          title={activeStatus === 'All' ? 'No orders yet' : `No ${activeStatus.toLowerCase()} orders`}
-          description={activeStatus === 'All'
+          title={activeStatus === 'all' ? 'No orders yet' : `No ${activeStatus} orders`}
+          description={activeStatus === 'all'
             ? 'Start exploring our products and place your first order today.'
-            : `You don't have any orders with ${activeStatus.toLowerCase()} status.`}
-          action={activeStatus === 'All' ? (
+            : `You don't have any orders with ${activeStatus} status.`}
+          action={activeStatus === 'all' ? (
             <Button onClick={() => navigate('/products')} size="lg" className="rounded-full gap-2">
               <ShoppingBag className="h-4 w-4" />
               Start Shopping
