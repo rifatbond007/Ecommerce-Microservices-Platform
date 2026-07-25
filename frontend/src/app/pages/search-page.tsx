@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { searchApi } from '@/lib/api';
+import { productApi, searchApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,19 @@ export function SearchPage() {
     setLoading(true);
     try {
       const { data } = await searchApi.search(query);
-      setResults(data.products || []);
+      let products = data.products || [];
+      // Fallback to the product catalog when the search index is empty
+      // (fresh DBs without a reindex). The product service already
+      // supports a `search` query param.
+      if (products.length === 0) {
+        try {
+          const r = await productApi.getProducts({ search: query, limit: 50 });
+          products = r.data.products || [];
+        } catch {
+          // search-only result is fine
+        }
+      }
+      setResults(products);
     } catch {
       setResults([]);
     } finally {
@@ -136,8 +148,10 @@ export function SearchPage() {
                           <h3 className="font-medium truncate group-hover:text-primary transition-colors">{p.name}</h3>
                         </Link>
                         <div className="flex items-center justify-between mt-2">
-                          <p className="text-lg font-bold">${p.price}</p>
-                          {p.compareAtPrice && (
+                          <p className="text-lg font-bold">
+                            ${p.basePrice ? Number(p.basePrice).toFixed(2) : Number(p.price).toFixed(2)}
+                          </p>
+                          {p.compareAtPrice && Number(p.compareAtPrice) > 0 && (
                             <Badge variant="warning" className="text-[10px] leading-none py-0.5">
                               Sale
                             </Badge>
