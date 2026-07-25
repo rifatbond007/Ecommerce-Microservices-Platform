@@ -6,9 +6,9 @@ import type { DashboardStats } from './dashboard.types';
 export class DashboardService {
   async getStats(period: DashboardStats['period'] = 'week') {
     const [usersRes, productsRes, ordersRes] = await Promise.all([
-      axios.get(`${config.userService.url}/api/v1/admin/users/stats`, { params: { period } }).catch(() => ({ data: { data: { total: 0, new: 0 } } })),
-      axios.get(`${config.productService.url}/api/v1/admin/products/stats`, { params: { period } }).catch(() => ({ data: { data: { total: 0, new: 0 } } })),
-      axios.get(`${config.orderService.url}/api/v1/admin/orders/stats`, { params: { period } }).catch(() => ({ data: { data: { total: 0, revenue: 0 } } })),
+      axios.get(`${config.userService.url}/api/v1/users/admin/stats`, { params: { period } }).catch(() => ({ data: { data: { total: 0, new: 0 } } })),
+      axios.get(`${config.productService.url}/api/v1/products/admin/stats`, { params: { period } }).catch(() => ({ data: { data: { total: 0, new: 0 } } })),
+      axios.get(`${config.orderService.url}/api/v1/orders/admin/stats`, { params: { period } }).catch(() => ({ data: { data: { total: 0, revenue: 0 } } })),
     ]);
 
     const recentLogs = await adminLogRepository.findAll(10);

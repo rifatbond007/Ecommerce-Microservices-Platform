@@ -142,7 +142,7 @@ export const userApi = {
   updateProfile: (data: Record<string, unknown>) => api.put('/users/me', data),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
-  deleteAccount: () => api.delete('/auth/users/account'),
+  deleteAccount: () => api.delete('/users/me'),
   getAddresses: () => api.get('/users/me/addresses'),
   addAddress: (data: Record<string, unknown>) => api.post('/users/me/addresses', data),
   updateAddress: (id: string, data: Record<string, unknown>) =>
