@@ -4,6 +4,7 @@ import { useCartStore } from '@/store/cart-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 
 export function CartPage() {
@@ -11,19 +12,17 @@ export function CartPage() {
   const { items, updateItem, removeItem, clearCart, getTotal } = useCartStore();
 
   if (items.length === 0) return (
-    <div className="container mx-auto px-4 py-20 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md mx-auto"
-      >
-        <ShoppingBag className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
-        <h1 className="text-3xl font-bold mb-3">Your cart is empty</h1>
-        <p className="text-muted-foreground mb-8">Looks like you haven't added anything yet. Start shopping to fill it up!</p>
-        <Button size="lg" className="rounded-full px-8" onClick={() => navigate('/products')}>
-          Continue Shopping
-        </Button>
-      </motion.div>
+    <div className="container mx-auto px-4 py-20">
+      <EmptyState
+        icon={<ShoppingBag className="h-12 w-12" />}
+        title="Your cart is empty"
+        description="Looks like you haven't added anything yet. Start shopping to fill it up!"
+        action={
+          <Button size="lg" className="rounded-full px-8" onClick={() => navigate('/products')}>
+            Continue Shopping
+          </Button>
+        }
+      />
     </div>
   );
 
