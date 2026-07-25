@@ -1,17 +1,36 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import httpProxy from 'http-proxy';
 import { SERVICE_DOCS } from '../../config/swagger';
 import { config } from '../../config';
+import { logger } from '../../utils/logger';
+import { InternalServerError } from '../../utils/errors';
+
+const docsProxy = httpProxy.createProxyServer({
+  changeOrigin: true,
+  timeout: 30000,
+  proxyTimeout: 30000,
+});
+
+docsProxy.on('error', (err, _req, res) => {
+  logger.error('Docs proxy error:', err);
+  const response = res as Response;
+  if (!response.headersSent) {
+    response.status(503).json({
+      success: false,
+      error: { code: 'SERVICE_UNAVAILABLE', message: 'Upstream docs unavailable' },
+    });
+  }
+});
 
 /**
- * Aggregator Swagger UI — links to per-service UIs (served from the per-service
- * ports in dev; via the gateway at `/docs/<name>` in prod once the gateway
- * proxies those paths).
+ * Aggregator Swagger UI — links to per-service UIs (proxied through the
+ * gateway at `/docs/<name>` so it works in any environment, not just dev).
  */
 export const docsIndexHandler = (_req: Request, res: Response) => {
   const base = `http://localhost:${config.port}`;
   const items = SERVICE_DOCS.map(
     (s) =>
-      `<li><a href="${s.url}">${s.name}</a> — <small>port ${s.port}</small></li>`
+      `<li><a href="${s.url}">${s.name}</a></li>`
   ).join('');
   res.send(`<!doctype html>
 <html lang="en">
@@ -24,7 +43,6 @@ export const docsIndexHandler = (_req: Request, res: Response) => {
   h1 { letter-spacing: -0.01em; }
   ul { line-height: 2; }
   code { font-family: ui-monospace, Menlo, monospace; background: #f6f6f6; padding: 1px 6px; border-radius: 4px; }
-  small { color: #666; }
   header { border-bottom: 1px solid #e5e5e5; padding-bottom: 16px; margin-bottom: 24px; }
   footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e5e5; color: #666; font-size: 12px; }
   a { color: #0066cc; text-decoration: none; } a:hover { text-decoration: underline; }
@@ -47,13 +65,11 @@ export const docsIndexHandler = (_req: Request, res: Response) => {
 };
 
 /**
- * Direct passthrough — the gateway lives at :3000 and we don't proxy the
- * per-service /api/docs paths through the router (they're not under /api/v1).
- * Operators on a real cluster would put a CDN/reverse-proxy in front.
- *
- * The /docs/<name> pages below simply redirect to the upstream Swagger UI.
+ * Proxy to upstream Swagger UI for `<service>`. Works in any environment —
+ * routes through the gateway's internal network address, not a dev-only
+ * localhost port.
  */
-export const docsProxyHandler = (req: Request, res: Response) => {
+export const docsProxyHandler = (req: Request, res: Response, next: NextFunction) => {
   const name = req.params.name;
   const entry = SERVICE_DOCS.find((s) => s.url === `/docs/${name}`);
   if (!entry) {
@@ -63,5 +79,16 @@ export const docsProxyHandler = (req: Request, res: Response) => {
     });
     return;
   }
-  res.redirect(`http://localhost:${entry.port}/api/docs/`);
+  // Build the upstream target from the configured service URL.
+  const upstream = config.services[entry.serviceName as keyof typeof config.services];
+  if (!upstream) {
+    next(new InternalServerError(`No upstream configured for service: ${entry.serviceName}`));
+    return;
+  }
+  docsProxy.web(req, res, { target: upstream }, (err) => {
+    if (err) {
+      logger.error(`Docs proxy error for ${entry.serviceName}:`, err);
+      next(err);
+    }
+  });
 };

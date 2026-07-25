@@ -8,6 +8,8 @@ import { swaggerSpec } from './config/swagger';
 import { errorMiddleware, notFoundMiddleware, rateLimitMiddleware } from './middleware';
 import { logger } from './utils/logger';
 import { config } from './config';
+import { prisma } from './shared/prisma/prisma.client';
+import { isRedisAvailable } from './shared/redis/redis.client';
 
 export const createApp = (): Application => {
   const app = express();
@@ -47,8 +49,31 @@ export const createApp = (): Application => {
   app.use(express.urlencoded({ extended: true }));
 
   // /health is exempt from rate-limit so container healthchecks stay cheap.
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', service: config.services ? 'gateway' : 'gateway', uptime: process.uptime() });
+  // Probes Postgres + Redis so k8s/lb probes reflect real readiness.
+  app.get('/health', async (_req: Request, res: Response) => {
+    const checks: Record<string, { ok: boolean; latencyMs?: number; error?: string }> = {};
+    const startedAt = Date.now();
+
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      checks.database = { ok: true, latencyMs: Date.now() - startedAt };
+    } catch (err) {
+      checks.database = {
+        ok: false,
+        latencyMs: Date.now() - startedAt,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+
+    checks.redis = { ok: isRedisAvailable() };
+
+    const allOk = Object.values(checks).every((c) => c.ok);
+    res.status(allOk ? 200 : 503).json({
+      status: allOk ? 'ok' : 'degraded',
+      service: 'gateway',
+      uptime: process.uptime(),
+      checks,
+    });
   });
 
   app.use(

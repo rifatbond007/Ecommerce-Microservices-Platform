@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../utils/errors';
+import { AppError, isPrismaError, handlePrismaError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
 export const errorHandler = (
@@ -19,6 +19,23 @@ export const errorHandler = (
     });
   }
 
+  if (isPrismaError(err)) {
+    const appError = handlePrismaError(err);
+    logger.error('Database error', {
+      code: err.code,
+      message: err.message,
+      path: req.path,
+      method: req.method,
+    });
+    return res.status(appError.statusCode).json({
+      success: false,
+      error: {
+        code: appError.errorCode,
+        message: appError.message,
+      },
+    });
+  }
+
   logger.error('Unexpected error', {
     error: err.message,
     stack: err.stack,
@@ -26,11 +43,12 @@ export const errorHandler = (
     method: req.method,
   });
 
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
   return res.status(500).json({
     success: false,
     error: {
       code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred',
+      message: isDev ? err.message : 'An unexpected error occurred',
     },
   });
 };

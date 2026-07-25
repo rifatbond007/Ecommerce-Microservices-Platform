@@ -9,12 +9,16 @@ export class WebhooksService {
   /**
    * Verify a Stripe webhook signature using the configured webhook secret.
    * Throws ValidationError if the signature is invalid or the secret is not configured.
+   *
+   * SECURITY: An unconfigured (empty) secret is treated as a misconfiguration, NOT
+   * a free pass. Silently allowing unsigned webhooks would let an attacker forge
+   * `payment.completed` events and mark orders paid.
    */
   verifyStripeSignature(rawBody: Buffer, signatureHeader: string | undefined): void {
     const secret = config.stripe?.webhookSecret;
     if (!secret) {
-      logger.warn('STRIPE_WEBHOOK_SECRET not configured; skipping signature verification');
-      return;
+      logger.error('STRIPE_WEBHOOK_SECRET not configured; rejecting webhook');
+      throw new ValidationError('Webhook signing secret not configured');
     }
     if (!signatureHeader) {
       throw new ValidationError('Missing Stripe-Signature header');
