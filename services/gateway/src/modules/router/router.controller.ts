@@ -72,7 +72,6 @@ export const defaultRoutes: ServiceRoute[] = [
   { path: '/api/v1/saved-carts', method: 'ALL', targetService: 'cart', authRequired: true },
   { path: '/api/v1/admin', method: 'ALL', targetService: 'admin', authRequired: true },
   { path: '/api/v1/sellers', method: 'ALL', targetService: 'user', authRequired: true },
-  { path: '/api/v1/seller', method: 'ALL', targetService: 'user', authRequired: true },
   // Webhooks bypass auth + rate limit; signature is verified by the upstream service.
   { path: '/api/v1/webhooks', method: 'ALL', targetService: 'payment', authRequired: false },
 ];
