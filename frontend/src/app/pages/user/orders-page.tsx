@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { AlertCircle, ShoppingBag, Package, ChevronRight } from 'lucide-react';
 
 interface OrderItem {
@@ -124,33 +125,21 @@ export function OrdersPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-24 text-center"
-        >
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-6">
-            {activeStatus === 'All' ? (
-              <Package className="h-8 w-8 text-muted-foreground" />
-            ) : (
-              <ShoppingBag className="h-8 w-8 text-muted-foreground" />
-            )}
-          </div>
-          <h3 className="text-lg font-semibold mb-2">
-            {activeStatus === 'All' ? 'No orders yet' : `No ${activeStatus.toLowerCase()} orders`}
-          </h3>
-          <p className="text-muted-foreground mb-6 max-w-sm">
-            {activeStatus === 'All'
-              ? 'Start exploring our products and place your first order today.'
-              : `You don\'t have any orders with ${activeStatus.toLowerCase()} status.`}
-          </p>
-          {activeStatus === 'All' && (
+        <EmptyState
+          icon={activeStatus === 'All'
+            ? <Package className="h-12 w-12" />
+            : <ShoppingBag className="h-12 w-12" />}
+          title={activeStatus === 'All' ? 'No orders yet' : `No ${activeStatus.toLowerCase()} orders`}
+          description={activeStatus === 'All'
+            ? 'Start exploring our products and place your first order today.'
+            : `You don't have any orders with ${activeStatus.toLowerCase()} status.`}
+          action={activeStatus === 'All' ? (
             <Button onClick={() => navigate('/products')} size="lg" className="rounded-full gap-2">
               <ShoppingBag className="h-4 w-4" />
               Start Shopping
             </Button>
-          )}
-        </motion.div>
+          ) : undefined}
+        />
       ) : (
         <AnimatePresence mode="wait">
           <motion.div

@@ -49,20 +49,25 @@ export function Header() {
           Market
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6">
-          {['Products', 'Categories'].map((item) => (
-            <Link
-              key={item}
-              to={`/${item.toLowerCase()}`}
-              className="text-xs font-bold uppercase tracking-widest text-[#666666] hover:text-[#111111] transition-colors"
-            >
-              {item}
-            </Link>
-          ))}
-          <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)}>
+        <div className="flex items-center gap-2">
+          {/* Mobile-only icons (search + cart), so they're reachable below `md`.
+              Hidden on md+ where the full nav takes over. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            aria-label="Open search"
+            onClick={() => setSearchOpen(true)}
+          >
             <Search className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/cart')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative md:hidden"
+            aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+            onClick={() => navigate('/cart')}
+          >
             <ShoppingCart className="h-4 w-4" />
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#111111] text-white text-[9px] font-bold flex items-center justify-center">
@@ -70,99 +75,126 @@ export function Header() {
               </span>
             )}
           </Button>
-          {isAuthenticated && (
-            <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/notifications')}>
-              <Bell className="h-4 w-4" />
-              {unreadNotifications > 0 && (
+
+          <nav className="hidden md:flex items-center gap-6">
+            {['Products', 'Categories'].map((item) => (
+              <Link
+                key={item}
+                to={`/${item.toLowerCase()}`}
+                className="text-xs font-bold uppercase tracking-widest text-[#666666] hover:text-[#111111] transition-colors"
+              >
+                {item}
+              </Link>
+            ))}
+            <Button variant="ghost" size="icon" aria-label="Open search" onClick={() => setSearchOpen(true)}>
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="relative" aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`} onClick={() => navigate('/cart')}>
+              <ShoppingCart className="h-4 w-4" />
+              {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#111111] text-white text-[9px] font-bold flex items-center justify-center">
-                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  {cartCount}
                 </span>
               )}
             </Button>
-          )}
-          {isAuthenticated ? (
-            <div className="relative">
-              <Button variant="ghost" size="icon" onClick={() => setUserMenuOpen(!userMenuOpen)}>
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className="bg-[#111111] text-white text-[10px] font-bold">
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+            {isAuthenticated && (
+              <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications, ${unreadNotifications} unread`} onClick={() => navigate('/notifications')}>
+                <Bell className="h-4 w-4" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#111111] text-white text-[9px] font-bold flex items-center justify-center">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </span>
+                )}
               </Button>
-              {userMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-56 border border-[#e5e5e5] bg-white z-20">
-                    <div className="p-3 border-b border-[#e5e5e5]">
-                      <p className="text-sm font-bold text-[#111111] truncate">{user?.email}</p>
-                      <p className="text-xs text-[#666666] uppercase tracking-wider mt-0.5">
-                        {user?.role?.replace('_', ' ')}
-                        {user?.sellerStatus === 'APPROVED' ? ' · SELLER' : ''}
-                      </p>
+            )}
+            {isAuthenticated ? (
+              <div className="relative">
+                <Button variant="ghost" size="icon" aria-label="Account menu" onClick={() => setUserMenuOpen(!userMenuOpen)}>
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="bg-[#111111] text-white text-[10px] font-bold">
+                      {user?.email?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-56 border border-[#e5e5e5] bg-white z-20">
+                      <div className="p-3 border-b border-[#e5e5e5]">
+                        <p className="text-sm font-bold text-[#111111] truncate">{user?.email}</p>
+                        <p className="text-xs text-[#666666] uppercase tracking-wider mt-0.5">
+                          {user?.role?.replace('_', ' ')}
+                          {user?.sellerStatus === 'APPROVED' ? ' · SELLER' : ''}
+                        </p>
+                      </div>
+                      <div className="p-1">
+                        {[
+                          { label: 'Profile', path: '/profile', icon: User },
+                          { label: 'Orders', path: '/orders', icon: ShoppingCart },
+                        ].map(({ label, path, icon: Icon }) => (
+                          <button
+                            key={label}
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
+                            onClick={() => { navigate(path); setUserMenuOpen(false); }}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {label}
+                          </button>
+                        ))}
+                        {user?.sellerStatus === 'APPROVED' && (
+                          <button
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
+                            onClick={() => { navigate('/seller'); setUserMenuOpen(false); }}
+                          >
+                            <Store className="h-3.5 w-3.5" /> Seller Dashboard
+                          </button>
+                        )}
+                        {(!user?.sellerStatus || user?.sellerStatus === 'NONE') && (
+                          <button
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
+                            onClick={() => { navigate('/become-seller'); setUserMenuOpen(false); }}
+                          >
+                            <Store className="h-3.5 w-3.5" /> Become a Seller
+                          </button>
+                        )}
+                        {user?.role === 'admin' && (
+                          <button
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
+                            onClick={() => { navigate('/admin'); setUserMenuOpen(false); }}
+                          >
+                            <LayoutDashboard className="h-3.5 w-3.5" /> Admin Dashboard
+                          </button>
+                        )}
+                      </div>
+                      <div className="border-t border-[#e5e5e5] p-1">
+                        <button
+                          className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
+                          onClick={() => { handleLogout(); setUserMenuOpen(false); }}
+                        >
+                          <LogOut className="h-3.5 w-3.5" /> Logout
+                        </button>
+                      </div>
                     </div>
-                    <div className="p-1">
-                      {[
-                        { label: 'Profile', path: '/profile', icon: User },
-                        { label: 'Orders', path: '/orders', icon: ShoppingCart },
-                      ].map(({ label, path, icon: Icon }) => (
-                        <button
-                          key={label}
-                          className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                          onClick={() => { navigate(path); setUserMenuOpen(false); }}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                          {label}
-                        </button>
-                      ))}
-                      {user?.sellerStatus === 'APPROVED' && (
-                        <button
-                          className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                          onClick={() => { navigate('/seller'); setUserMenuOpen(false); }}
-                        >
-                          <Store className="h-3.5 w-3.5" /> Seller Dashboard
-                        </button>
-                      )}
-                      {(!user?.sellerStatus || user?.sellerStatus === 'NONE') && (
-                        <button
-                          className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                          onClick={() => { navigate('/become-seller'); setUserMenuOpen(false); }}
-                        >
-                          <Store className="h-3.5 w-3.5" /> Become a Seller
-                        </button>
-                      )}
-                      {user?.role === 'admin' && (
-                        <button
-                          className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                          onClick={() => { navigate('/admin'); setUserMenuOpen(false); }}
-                        >
-                          <LayoutDashboard className="h-3.5 w-3.5" /> Admin Dashboard
-                        </button>
-                      )}
-                    </div>
-                    <div className="border-t border-[#e5e5e5] p-1">
-                      <button
-                        className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                        onClick={() => { handleLogout(); setUserMenuOpen(false); }}
-                      >
-                        <LogOut className="h-3.5 w-3.5" /> Logout
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <Button size="sm" onClick={() => navigate('/login')}>
-              Sign In
-            </Button>
-          )}
+                  </>
+                )}
+              </div>
+            ) : (
+              <Button size="sm" onClick={() => navigate('/login')}>
+                Sign In
+              </Button>
+            )}
+          </nav>
+
+          {/* Hamburger — outside the nav so it shows on mobile. md:hidden. */}
           <button
             className="md:hidden p-2 text-[#111111]"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-        </nav>
+        </div>
       </div>
 
       {mobileMenuOpen && (

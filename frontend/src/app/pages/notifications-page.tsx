@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Bell, CheckCheck, Trash2, AlertCircle, BellOff, Info, ShoppingBag, AlertTriangle, Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -159,28 +160,15 @@ export function NotificationsPage() {
       </AnimatePresence>
 
       {notifications.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
-        >
-          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-6">
-            {unreadCount > 0 ? (
-              <Bell className="h-10 w-10 text-primary/60" />
-            ) : (
-              <BellOff className="h-10 w-10 text-muted-foreground" />
-            )}
-          </div>
-          <h3 className="text-xl font-semibold mb-2">
-            {unreadCount > 0 ? 'No notifications' : 'All caught up!'}
-          </h3>
-          <p className="text-muted-foreground max-w-md">
-            {unreadCount > 0
-              ? 'Notifications about orders, promotions, and updates will appear here.'
-              : 'You have no unread notifications. We\'ll notify you when something new arrives.'}
-          </p>
-        </motion.div>
+        <EmptyState
+          icon={unreadCount > 0
+            ? <Bell className="h-12 w-12" />
+            : <BellOff className="h-12 w-12" />}
+          title={unreadCount > 0 ? 'No notifications' : 'All caught up!'}
+          description={unreadCount > 0
+            ? 'Notifications about orders, promotions, and updates will appear here.'
+            : "You have no unread notifications. We'll notify you when something new arrives."}
+        />
       ) : (
         <motion.div
           variants={container}

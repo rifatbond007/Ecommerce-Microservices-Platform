@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { userApi, productApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Heart, ShoppingBag, Trash2 } from 'lucide-react';
 
 interface WishlistItemData {
@@ -85,21 +86,19 @@ export function WishlistsPage() {
         </div>
 
         {items.length === 0 ? (
-          <div className="px-8 py-16 text-center">
-            <div className="h-12 w-12 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-center mx-auto mb-6">
-              <Heart className="h-5 w-5 text-[#111111]" />
-            </div>
-            <h3 className="text-sm font-bold text-[#111111] uppercase tracking-wider mb-2">
-              Your wishlist is empty
-            </h3>
-            <p className="text-xs text-[#666666] mb-6">
-              Save your favorite items and come back to them anytime.
-            </p>
-            <Link to="/products">
-              <Button size="sm">
-                <ShoppingBag className="h-3 w-3 mr-1" /> Browse Products
-              </Button>
-            </Link>
+          <div className="p-8">
+            <EmptyState
+              icon={<Heart className="h-12 w-12" />}
+              title="Your wishlist is empty"
+              description="Save your favorite items and come back to them anytime."
+              action={
+                <Link to="/products">
+                  <Button size="sm" className="rounded-full">
+                    <ShoppingBag className="h-3 w-3 mr-1" /> Browse Products
+                  </Button>
+                </Link>
+              }
+            />
           </div>
         ) : (
           <div className="px-8 py-8">
