@@ -46,13 +46,13 @@ export const swaggerSpec = swaggerJsdoc({
  * The actual specs are served from each service's `/api/docs`.
  */
 export const SERVICE_DOCS = [
-  { name: 'Auth',          url: '/docs/auth',          port: 3001 },
-  { name: 'User',          url: '/docs/user',          port: 3002 },
-  { name: 'Product',       url: '/docs/product',       port: 3003 },
-  { name: 'Cart',          url: '/docs/cart',          port: 3004 },
-  { name: 'Order',         url: '/docs/order',         port: 3005 },
-  { name: 'Payment',       url: '/docs/payment',       port: 3006 },
-  { name: 'Notification',  url: '/docs/notification',  port: 3007 },
-  { name: 'Search',        url: '/docs/search',        port: 3008 },
-  { name: 'Admin',         url: '/docs/admin',         port: 3009 },
+  { name: 'Auth',          url: '/docs/auth',          port: 3001, serviceName: 'auth' as const },
+  { name: 'User',          url: '/docs/user',          port: 3002, serviceName: 'user' as const },
+  { name: 'Product',       url: '/docs/product',       port: 3003, serviceName: 'product' as const },
+  { name: 'Cart',          url: '/docs/cart',          port: 3004, serviceName: 'cart' as const },
+  { name: 'Order',         url: '/docs/order',         port: 3005, serviceName: 'order' as const },
+  { name: 'Payment',       url: '/docs/payment',       port: 3006, serviceName: 'payment' as const },
+  { name: 'Notification',  url: '/docs/notification',  port: 3007, serviceName: 'notification' as const },
+  { name: 'Search',        url: '/docs/search',        port: 3008, serviceName: 'search' as const },
+  { name: 'Admin',         url: '/docs/admin',         port: 3009, serviceName: 'admin' as const },
 ];

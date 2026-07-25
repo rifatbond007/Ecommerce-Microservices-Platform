@@ -18,6 +18,7 @@ import {
   sendPasswordResetEmail,
 } from '../../utils/email';
 import {
+  AppError,
   ConflictError,
   NotFoundError,
   UnauthorizedError,
@@ -35,45 +36,70 @@ export class AuthService {
   async register(input: RegisterInput, ipAddress?: string, userAgent?: string): Promise<AuthResponse> {
     const { email, password, username, firstName, lastName, phone } = input;
 
-    if (await userRepository.existsByEmail(email)) {
-      throw new ConflictError('Email already registered');
+    try {
+      if (await userRepository.existsByEmail(email)) {
+        throw new ConflictError('Email already registered');
+      }
+
+      if (await userRepository.existsByUsername(username)) {
+        throw new ConflictError('Username already taken');
+      }
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Failed to check user existence', { error });
+      throw new AppError(503, 'DATABASE_ERROR', 'Unable to process registration at this time');
     }
 
-    if (await userRepository.existsByUsername(username)) {
-      throw new ConflictError('Username already taken');
+    let passwordHash: string;
+    try {
+      passwordHash = await bcrypt.hash(password, config.bcrypt.saltRounds);
+    } catch (error) {
+      logger.error('Failed to hash password', { error });
+      throw new AppError(500, 'INTERNAL_ERROR', 'Failed to process registration');
     }
 
-    const passwordHash = await bcrypt.hash(password, config.bcrypt.saltRounds);
     const verificationToken = uuidv4();
 
     const isAdminEmail = email.toLowerCase() === config.admin.email.toLowerCase() && config.admin.email !== '';
     const role = isAdminEmail ? 'admin' : 'user';
 
-    const user = await userRepository.create({
-      email,
-      passwordHash,
-      username,
-      firstName,
-      lastName,
-      phone,
-      role,
-    });
+    let user: any;
+    try {
+      user = await userRepository.create({
+        email,
+        passwordHash,
+        username,
+        firstName,
+        lastName,
+        phone,
+        role,
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Failed to create user', { error, email });
+      throw new AppError(500, 'DATABASE_ERROR', 'Failed to create user account');
+    }
 
-    if (config.nodeEnv === 'development') {
-      await userRepository.update(user.id, { verificationToken: null, isVerified: true });
-      user.isVerified = true;
-    } else {
-      await userRepository.update(user.id, { verificationToken });
+    try {
+      if (config.nodeEnv === 'development') {
+        await userRepository.update(user.id, { verificationToken: null, isVerified: true });
+        user.isVerified = true;
+      } else {
+        await userRepository.update(user.id, { verificationToken });
 
-      try {
-        await sendVerificationEmail({
-          email: user.email,
-          username: user.username,
-          token: verificationToken,
-        });
-      } catch (error) {
-        logger.warn('Failed to send verification email, user still registered', { userId: user.id });
+        try {
+          await sendVerificationEmail({
+            email: user.email,
+            username: user.username,
+            token: verificationToken,
+          });
+        } catch (error) {
+          logger.warn('Failed to send verification email, user still registered', { userId: user.id });
+        }
       }
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Failed to update user after creation', { error, userId: user.id });
     }
 
     const tokens = await this.generateTokens(user.id, user.email, role, ipAddress, userAgent);
@@ -291,16 +317,28 @@ export class AuthService {
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    const tokenHash = await hashToken(refreshToken);
+    let tokenHash: string;
+    try {
+      tokenHash = await hashToken(refreshToken);
+    } catch (error) {
+      logger.error('Failed to hash refresh token', { error, userId });
+      throw new AppError(500, 'INTERNAL_ERROR', 'Failed to create session');
+    }
+
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    await sessionRepository.create({
-      userId,
-      tokenHash,
-      ipAddress,
-      userAgent,
-      expiresAt,
-    });
+    try {
+      await sessionRepository.create({
+        userId,
+        tokenHash,
+        ipAddress,
+        userAgent,
+        expiresAt,
+      });
+    } catch (error) {
+      logger.error('Failed to create session', { error, userId });
+      throw new AppError(503, 'SESSION_ERROR', 'Unable to create session, please try again');
+    }
 
     return { accessToken, refreshToken };
   }

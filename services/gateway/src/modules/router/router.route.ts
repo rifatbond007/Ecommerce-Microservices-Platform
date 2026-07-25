@@ -56,40 +56,12 @@ setupRoutes();
 
 /**
  * @swagger
- * /health:
- *   get:
- *     summary: Gateway health check
- *     tags: [Gateway]
- *     responses:
- *       200:
- *         description: API Gateway is running
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- */
-router.get('/health', (req: Request, res: Response) => {
-  res.json({
-    success: true,
-    message: 'API Gateway is running',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-/**
- * @swagger
  * /routes:
  *   get:
- *     summary: List all registered routes
+ *     summary: List all registered routes (admin only)
  *     tags: [Gateway]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of all registered routes
@@ -102,8 +74,20 @@ router.get('/health', (req: Request, res: Response) => {
  *                   type: boolean
  *                 data:
  *                   type: array
+ *       401:
+ *         description: Missing or invalid token
+ *       403:
+ *         description: Admin role required
  */
-router.get('/routes', (req: Request, res: Response) => {
+router.get('/routes', authMiddleware, (req: Request, res: Response) => {
+  // Admin-only — exposes internal service routing that should not be public.
+  if (req.user?.role !== 'admin') {
+    res.status(403).json({
+      success: false,
+      error: { code: 'FORBIDDEN', message: 'Admin role required' },
+    });
+    return;
+  }
   res.json({
     success: true,
     data: routerService.getAllRoutes(),
