@@ -17,9 +17,11 @@ export class SearchController {
 
       res.status(200).json({
         success: true,
-        data: result.results,
-        pagination: { total: result.total, limit, offset },
-        meta: { categories: result.categories },
+        data: {
+          products: result.results,
+          pagination: { total: result.total, limit, offset },
+          categories: result.categories,
+        },
       });
     } catch (error) {
       next(error);

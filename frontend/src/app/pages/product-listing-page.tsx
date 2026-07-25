@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { productApi } from '@/lib/api';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Product {
-  id: string; name: string; price: number; comparePrice?: number; images: string[]; slug: string;
+  id: string; name: string; basePrice: string; compareAtPrice?: string | null; images: string[]; slug: string;
 }
 
 const container = {
@@ -27,10 +27,17 @@ export function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const categoryId = searchParams.get('categoryId') || undefined;
 
   useEffect(() => {
-    productApi.getProducts({ limit: 50 }).then(r => setProducts(r.data.products || [])).catch(console.error).finally(() => setLoading(false));
-  }, []);
+    setLoading(true);
+    productApi
+      .getProducts({ limit: 50, categoryId })
+      .then(r => setProducts(r.data.products || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [categoryId]);
 
   const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -94,9 +101,9 @@ export function ProductsPage() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground">No Image</div>
                     )}
-                    {p.comparePrice && (
+                    {p.compareAtPrice && Number(p.compareAtPrice) > 0 && (
                       <Badge variant="destructive" className="absolute top-2 left-2">
-                        -{Math.round((1 - p.price / p.comparePrice) * 100)}%
+                        -{Math.round((1 - Number(p.basePrice) / Number(p.compareAtPrice)) * 100)}%
                       </Badge>
                     )}
                   </div>
@@ -106,8 +113,8 @@ export function ProductsPage() {
                     <h3 className="font-medium truncate group-hover:text-primary transition-colors">{p.name}</h3>
                   </Link>
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="text-lg font-bold text-primary">${p.price}</span>
-                    {p.comparePrice && <span className="text-sm text-muted-foreground line-through">${p.comparePrice}</span>}
+                    <span className="text-lg font-bold text-primary">${Number(p.basePrice).toFixed(2)}</span>
+                    {p.compareAtPrice && <span className="text-sm text-muted-foreground line-through">${Number(p.compareAtPrice).toFixed(2)}</span>}
                   </div>
                   <Link to={`/products/${p.id}`}>
                     <Button className="w-full mt-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0" size="sm">

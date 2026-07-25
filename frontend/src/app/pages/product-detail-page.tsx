@@ -15,8 +15,9 @@ interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
-  comparePrice?: number;
+  /** Product basePrice is a stringified Decimal from the API. */
+  basePrice: string;
+  compareAtPrice?: string | null;
   images: string[];
   category?: { name: string };
   /** 0..5 average rating, from the catalog `Product.averageRating` column. */
@@ -77,7 +78,11 @@ export function ProductDetailPage() {
     </div>
   );
 
-  const discount = product.comparePrice ? Math.round((1 - product.price / product.comparePrice) * 100) : 0;
+  const price = Number(product.basePrice);
+  const comparePrice = product.compareAtPrice ? Number(product.compareAtPrice) : undefined;
+  const discount = comparePrice && comparePrice > 0
+    ? Math.round((1 - price / comparePrice) * 100)
+    : 0;
 
   // Round to nearest half-star for the fill calculation, then split
   // into full / empty stars for the icon row. Default to 0 (no stars)
@@ -159,9 +164,9 @@ export function ProductDetailPage() {
           </div>
 
           <div className="flex items-baseline gap-3 mb-6">
-            <span className="text-3xl font-bold text-primary">${product.price}</span>
-            {product.comparePrice && (
-              <span className="text-xl text-muted-foreground line-through">${product.comparePrice}</span>
+            <span className="text-3xl font-bold text-primary">${price.toFixed(2)}</span>
+            {comparePrice && comparePrice > 0 && (
+              <span className="text-xl text-muted-foreground line-through">${comparePrice.toFixed(2)}</span>
             )}
           </div>
 
