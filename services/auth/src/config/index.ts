@@ -1,6 +1,13 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Force .env to override service settings that may be inherited from a stale
+// ts-node-dev process, but preserve NODE_ENV because test runners and process
+// managers use it to describe the current runtime environment.
+const runtimeNodeEnv = process.env.NODE_ENV;
+dotenv.config({ override: true });
+if (runtimeNodeEnv) {
+  process.env.NODE_ENV = runtimeNodeEnv;
+}
 
 
 // Fail-fast: refuse to boot in production without a real JWT_SECRET.

@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Force .env to override anything in process.env. Same fix as the gateway,
+// auth, and the rest of the services — see PUKU.md "ts-node-dev env-collision
+// gotcha".
+dotenv.config({ override: true });
 
 
 // Fail-fast: refuse to boot in production without a real JWT_SECRET.
@@ -51,6 +54,14 @@ export const config = {
 
   authService: {
     url: process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
+  },
+
+  // The gateway URL is the canonical entry point for inter-service calls
+  // because it's the single source of truth for JWT verification and
+  // routing. See services/admin/src/modules/{users,orders,products}/*.service.ts
+  // for the `x-internal-admin-call` header pattern that uses it.
+  gateway: {
+    url: process.env.GATEWAY_URL || 'http://localhost:3000',
   },
 
   userService: {
