@@ -29,6 +29,21 @@ export interface Tokens {
 let refreshPromise: Promise<Tokens | null> | null = null;
 
 /**
+ * Soft navigation hook. The auth interceptor lives outside React's component
+ * tree, so it can't call useNavigate. Instead, it dispatches this custom event
+ * and the App-level effect performs a react-router Navigate to /login. This
+ * avoids a hard page reload — which would re-trigger the same 401 / refresh
+ * loop and look like the page is "auto-reloading every second".
+ */
+export const navigateToLoginEvent = 'app:navigate-to-login';
+export const navigateToLogin = (): void => {
+  // localStorage cleared in caller before this fires
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(navigateToLoginEvent));
+  }
+};
+
+/**
  * Single refresh attempt shared across concurrent 401s — prevents the
  * stampede seen in the previous interceptor (every failed request triggered
  * its own /auth/refresh call).
@@ -50,8 +65,14 @@ const performRefresh = async (): Promise<Tokens | null> => {
         localStorage.setItem('refreshToken', tokens.refreshToken);
       }
       return tokens;
-    } catch {
-      return null;
+    } catch (error) {
+      // Only treat 401 (refresh token invalid/expired) as "we must log out".
+      // 5xx / network errors are transient — return a sentinel so the caller
+      // can re-throw the original 401 instead of bouncing the user.
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        return null;
+      }
+      throw error;
     } finally {
       refreshPromise = null;
     }
@@ -97,15 +118,22 @@ api.interceptors.response.use(
       !originalRequest.url?.includes('/auth/')
     ) {
       originalRequest._retry = true;
-      const tokens = await performRefresh();
+      let tokens: Tokens | null = null;
+      try {
+        tokens = await performRefresh();
+      } catch {
+        // performRefresh re-throws on transient failures (5xx / network).
+        // Don't bounce the user — just surface the original 401.
+        return Promise.reject(error);
+      }
       if (tokens?.accessToken) {
         originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
         return api(originalRequest);
       }
-      // Refresh failed — clear creds and bounce to login.
+      // Refresh token is genuinely invalid — clear creds and bounce to login.
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
-      window.location.assign('/login');
+      navigateToLogin();
     }
 
     return Promise.reject(error);

@@ -7,14 +7,29 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { prisma } from './repositories/prisma.client';
 import { createHealthChecks } from './utils/health';
+import { config } from './config';
 
 export const createApp = (): Express => {
   const app = express();
 
   app.set('trust proxy', 1);
   app.use(helmet());
+  // CORS — allow the frontend origin (FRONTEND_URL) plus comma-separated
+  // extras if set. The auth service should normally be reached via the
+  // gateway, but when the gateway is bypassed (dev tooling, e2e tests), this
+  // keeps the browser happy.
   app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // same-origin / server-to-server
+      const allowed = config.app.frontendUrl
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
+      if (allowed.includes(origin) || allowed.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin not allowed: ${origin}`), false);
+    },
     credentials: true,
   }));
   app.use(express.json());

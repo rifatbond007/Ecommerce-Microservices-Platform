@@ -73,9 +73,10 @@ Source of truth: `services/gateway/src/modules/router/router.controller.ts` → 
 Routes prefixed with `/api/v1/auth`, `/api/v1/users`, etc. are matched in order; unknown paths fall through to the DB-driven `routerService.resolveTargetService` (`RouteConfig` model).
 
 Gateway exposes:
-- `GET /health` — liveness.
-- `GET /api/v1/routes` — current routing table.
+- `GET /health` — liveness + dependency probe (Postgres + Redis). Returns 503 with per-check status when degraded.
+- `GET /routes` — current routing table (admin-only; bearer token required, role=admin).
 - `GET /docs` — list of per-service Swagger UIs.
+- `GET /docs/:name` — proxies the per-service Swagger UI (works in any environment, not just dev).
 
 ## Database strategy
 

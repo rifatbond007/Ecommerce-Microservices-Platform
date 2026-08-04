@@ -1,8 +1,9 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
+import { navigateToLoginEvent } from '@/lib/api';
 import { RootLayout } from './layouts/root-layout';
 import { Toaster } from '@/components/ui/toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -73,10 +74,25 @@ export default function App() {
   const { checkAuth } = useAuthStore();
   const { fetchCart } = useCartStore();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Run once on mount. zustand action references are stable across renders
+    // (the store factory creates them once), so an empty dep array is correct.
+    // Previously `, [checkAuth, fetchCart]` was harmless but noisy.
     checkAuth().then(() => fetchCart());
-  }, [checkAuth, fetchCart]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for soft "go to login" requests from the api interceptor (e.g.,
+  // when a refresh token is genuinely invalid). We use react-router
+  // navigation instead of window.location.assign so we don't trigger a hard
+  // page reload — which would re-run checkAuth, get the same 401, and loop.
+  useEffect(() => {
+    const handler = () => navigate('/login');
+    window.addEventListener(navigateToLoginEvent, handler);
+    return () => window.removeEventListener(navigateToLoginEvent, handler);
+  }, [navigate]);
 
   return (
     <TooltipProvider delayDuration={150}>

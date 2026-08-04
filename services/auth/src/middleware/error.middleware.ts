@@ -19,6 +19,19 @@ export const errorHandler = (
     });
   }
 
+  // CORS rejection — surface a structured 403 instead of the library's
+  // opaque body. Mirrors the gateway's error unwrap so the client sees
+  // the same envelope shape regardless of which layer rejected the origin.
+  if (err instanceof Error && err.message.startsWith('Origin not allowed:')) {
+    return res.status(403).json({
+      success: false,
+      error: {
+        code: 'FORBIDDEN_ORIGIN',
+        message: err.message,
+      },
+    });
+  }
+
   if (isPrismaError(err)) {
     const appError = handlePrismaError(err);
     logger.error('Database error', {
