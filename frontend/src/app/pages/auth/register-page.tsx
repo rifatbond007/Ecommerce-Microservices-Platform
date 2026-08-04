@@ -85,6 +85,9 @@ export function RegisterPage() {
                   placeholder="Min. 8 characters"
                   className="pr-10"
                 />
+                <p className="mt-2 text-xs text-[#777777]">
+                  Must be 8+ characters with at least one uppercase letter, one lowercase letter, and one number.
+                </p>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}

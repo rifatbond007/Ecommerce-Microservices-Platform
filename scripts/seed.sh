@@ -20,7 +20,7 @@ register_code=$(curl -s -o /tmp/seed-register.json -w "%{http_code}" \
   -X POST "$BASE_URL/api/v1/auth/register" \
   -H 'Content-Type: application/json' \
   -d "$(jq -n --arg email "$ADMIN_EMAIL" --arg pw "$ADMIN_PASSWORD" --arg u admin_$(date +%s) \
-      '{email:$email, password:$pw, username:$u, firstName:"Site", lastName:"Admin", phone:null}')")
+      '{email:$email, password:$pw, username:$u, firstName:"Site", lastName:"Admin", phone:""}')")
 echo "  register: HTTP $register_code"
 
 # Login
@@ -42,8 +42,8 @@ role=$(echo "$me" | jq -r '.data.role // empty')
 echo "  /me role: $role"
 
 if [ "$role" != "admin" ]; then
-  echo "  role is not admin — registering as admin will not have promoted it."
-  echo "  Promote manually with: psql ... and UPDATE users SET role='admin' WHERE email=...;"
+  echo "  role is not admin. Check that ADMIN_EMAIL in auth/.env matches the registered email."
+  echo "  The auth service auto-promotes users whose email matches config.admin.email."
   exit 2
 fi
 
