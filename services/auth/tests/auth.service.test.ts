@@ -16,6 +16,7 @@ const mockSessionFindByUserId = jest.fn() as Mock<Promise<any[]>, [string]>;
 const mockSessionFindByTokenHash = jest.fn() as Mock<Promise<any>, [string]>;
 const mockSessionDelete = jest.fn() as Mock<Promise<void>, [string]>;
 const mockSessionDeleteByUserId = jest.fn() as Mock<Promise<void>, [string]>;
+const mockSessionDeleteByTokenHash = jest.fn() as Mock<Promise<void>, [string]>;
 
 // Login attempt mock
 const mockLoginAttemptCreate = jest.fn() as Mock<Promise<any>, [any]>;
@@ -40,6 +41,7 @@ jest.mock('../src/repositories/session.repository', () => ({
     findByTokenHash: mockSessionFindByTokenHash,
     delete: mockSessionDelete,
     deleteByUserId: mockSessionDeleteByUserId,
+    deleteByTokenHash: mockSessionDeleteByTokenHash,
   },
 }));
 
@@ -70,6 +72,13 @@ jest.mock('bcrypt', () => ({
 describe('AuthService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Sensible defaults for methods that may be called but aren't the focus
+    // of the current test. `jest.clearAllMocks()` strips mockReturnValue, so
+    // without these the pre-delete call in generateTokens would throw a
+    // synchronous TypeError (calling .catch on `undefined`).
+    mockSessionDeleteByTokenHash.mockResolvedValue(undefined);
+    mockSessionDelete.mockResolvedValue(undefined);
+    mockSessionDeleteByUserId.mockResolvedValue(undefined);
   });
 
   describe('register', () => {
@@ -162,7 +171,7 @@ describe('AuthService', () => {
         isActive: true,
         isVerified: true,
         failedLoginAttempts: 0,
-        roles: [{ role: { name: 'user' } }],
+        role: 'user',
       });
       mockSessionCreate.mockResolvedValue({ id: 'session-id' });
       mockResetFailedLoginAttempts.mockResolvedValue(undefined);
@@ -265,7 +274,7 @@ describe('AuthService', () => {
         id: 'user-id',
         email: 'test@example.com',
         isActive: true,
-        roles: [{ role: { name: 'user' } }],
+        role: 'user',
       });
 
       const result = await authService.refreshToken('valid-refresh-token');
