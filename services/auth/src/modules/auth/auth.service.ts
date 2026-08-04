@@ -46,7 +46,11 @@ export class AuthService {
       }
     } catch (error) {
       if (error instanceof AppError) throw error;
-      logger.error('Failed to check user existence', { error });
+      logger.error('Failed to check user existence', {
+        message: error instanceof Error ? error.message : String(error),
+        code: (error as { code?: string })?.code,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       throw new AppError(503, 'DATABASE_ERROR', 'Unable to process registration at this time');
     }
 
@@ -174,7 +178,7 @@ export class AuthService {
       userAgent,
     });
 
-    const roles = user.roles.map((ur: { role: { name: string } }) => ur.role.name);
+    const roles = [user.role || 'user'];
     const tokens = await this.generateTokens(user.id, user.email, roles[0] || 'user', ipAddress, userAgent);
 
     logger.info('User logged in', { userId: user.id, email: user.email });
@@ -201,7 +205,7 @@ export class AuthService {
       throw new UnauthorizedError('User not found or inactive');
     }
 
-    const roles = user.roles.map((ur: { role: { name: string } }) => ur.role.name);
+    const roles = [user.role || 'user'];
 
     return this.generateTokens(user.id, user.email, roles[0] || 'user');
   }
@@ -297,7 +301,7 @@ export class AuthService {
       throw new NotFoundError('User');
     }
 
-    const roles = user.roles.map((ur: { role: { name: string } }) => ur.role.name);
+    const roles = [user.role || 'user'];
     return this.formatUserResponse(user, roles);
   }
 
@@ -328,6 +332,13 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     try {
+      // JWT iat is per-second, so a quick register-then-login pair can collide on token_hash.
+      // Delete any existing session with this hash first — it's the same logical session
+      // (e.g., a register creating a session, then an immediate login superseding it).
+      await sessionRepository.deleteByTokenHash(tokenHash).catch(() => {
+        /* no-op if no row matched */
+      });
+
       await sessionRepository.create({
         userId,
         tokenHash,
