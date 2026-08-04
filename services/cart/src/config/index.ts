@@ -1,6 +1,11 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Force .env to override anything in process.env. Under ts-node-dev we
+// have seen PORT=3006 / RATE_LIMIT_MAX_REQUESTS=100 / JWT_SECRET (placeholder)
+// injected before this config runs. Same fix as services/gateway/src/config/index.ts
+// and services/auth/src/config/index.ts — called out in PUKU.md "ts-node-dev
+// env-collision gotcha".
+dotenv.config({ override: true });
 
 
 // Fail-fast: refuse to boot in production without a real JWT_SECRET.

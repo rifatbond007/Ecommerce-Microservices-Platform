@@ -2,7 +2,7 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import routes from './routes';
-import { errorHandler, notFoundHandler } from './middleware';
+import { errorHandler, notFoundHandler, internalAdminCallGuard } from './middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import prisma from './repositories/prisma.client';
@@ -34,6 +34,13 @@ export const createApp = (): Express => {
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+  // Loop-break guard for internal admin calls (Bug 3 fix). Runs BEFORE
+  // the admin routes so it can short-circuit when the request carries
+  // `x-internal-admin-call: true` (admin's users/orders/products services
+  // tag their gateway calls with this header; we forward to the source
+  // service directly instead of looping back into the controller).
+  // See services/admin/src/middleware/internal-call.ts.
+  app.use('/api/v1/admin', internalAdminCallGuard);
   app.use('/api/v1/admin', routes);
 
   app.use(notFoundHandler);

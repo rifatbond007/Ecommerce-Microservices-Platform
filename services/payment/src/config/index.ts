@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Force .env to override anything in process.env. Same fix as the gateway,
+// auth, and the rest of the services — see PUKU.md "ts-node-dev env-collision
+// gotcha".
+dotenv.config({ override: true });
 
 
 // Fail-fast: refuse to boot in production without a real JWT_SECRET.
