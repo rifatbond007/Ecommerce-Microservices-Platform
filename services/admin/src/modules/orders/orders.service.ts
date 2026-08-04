@@ -4,8 +4,35 @@ import { NotFoundError } from '../../utils/errors';
 import { dashboardService } from '../dashboard/dashboard.service';
 import type { UpdateOrderStatusInput, OrderQueryInput } from './orders.types';
 
+/**
+ * Admin → source-service inter-service calls.
+ *
+ * See users.service.ts for the rationale behind the
+ * `x-internal-admin-call` header pattern. Same fix shape, same loop-break
+ * via the gateway loopback.
+ */
+const INTERNAL_HEADER = { 'x-internal-admin-call': 'true' };
+
+async function callGateway<T>(method: 'get' | 'post' | 'put' | 'delete', path: string, opts: {
+  params?: Record<string, unknown>;
+  data?: unknown;
+  adminToken?: string;
+} = {}): Promise<T> {
+  const headers: Record<string, string> = { ...INTERNAL_HEADER };
+  if (opts.adminToken) headers.Authorization = `Bearer ${opts.adminToken}`;
+  const response = await axios.request({
+    method,
+    url: `${config.gateway.url}${path}`,
+    params: opts.params,
+    data: opts.data,
+    headers,
+    timeout: 10000,
+  });
+  return response.data as T;
+}
+
 export class OrdersService {
-  async findAll(query: OrderQueryInput, adminId: string, ipAddress?: string) {
+  async findAll(query: OrderQueryInput, adminId: string, ipAddress?: string, adminToken?: string) {
     const params = {
       page: query.page,
       limit: query.limit,
@@ -15,10 +42,7 @@ export class OrdersService {
       ...(query.orderNumber && { orderNumber: query.orderNumber }),
     };
 
-    const response = await axios.get(`${config.orderService.url}/api/v1/admin/orders`, {
-      params,
-      headers: { 'x-user-id': adminId },
-    });
+    const data = await callGateway<unknown>('get', '/api/v1/admin/orders', { params, adminToken });
 
     await dashboardService.logAction({
       action: 'VIEW_ORDERS',
@@ -28,15 +52,13 @@ export class OrdersService {
       ipAddress,
     });
 
-    return response.data;
+    return data;
   }
 
-  async findById(orderId: string, adminId: string, ipAddress?: string) {
-    const response = await axios.get(`${config.orderService.url}/api/v1/admin/orders/${orderId}`, {
-      headers: { 'x-user-id': adminId },
-    });
+  async findById(orderId: string, adminId: string, ipAddress?: string, adminToken?: string) {
+    const data: any = await callGateway<unknown>('get', `/api/v1/admin/orders/${orderId}`, { adminToken });
 
-    if (!response.data.data) {
+    if (!data?.data) {
       throw new NotFoundError('Order');
     }
 
@@ -48,13 +70,11 @@ export class OrdersService {
       ipAddress,
     });
 
-    return response.data;
+    return data;
   }
 
-  async updateStatus(orderId: string, input: UpdateOrderStatusInput, adminId: string, ipAddress?: string) {
-    const response = await axios.put(`${config.orderService.url}/api/v1/admin/orders/${orderId}/status`, input, {
-      headers: { 'x-user-id': adminId },
-    });
+  async updateStatus(orderId: string, input: UpdateOrderStatusInput, adminId: string, ipAddress?: string, adminToken?: string) {
+    const data = await callGateway<unknown>('put', `/api/v1/admin/orders/${orderId}/status`, { data: input, adminToken });
 
     await dashboardService.logAction({
       action: 'UPDATE_ORDER_STATUS',
@@ -65,14 +85,14 @@ export class OrdersService {
       ipAddress,
     });
 
-    return response.data;
+    return data;
   }
 
-  async cancel(orderId: string, adminId: string, reason?: string, ipAddress?: string) {
-    const response = await axios.post(`${config.orderService.url}/api/v1/admin/orders/${orderId}/cancel`, 
-      { reason },
-      { headers: { 'x-user-id': adminId } }
-    );
+  async cancel(orderId: string, adminId: string, reason?: string, ipAddress?: string, adminToken?: string) {
+    const data = await callGateway<unknown>('post', `/api/v1/admin/orders/${orderId}/cancel`, {
+      data: { reason },
+      adminToken,
+    });
 
     await dashboardService.logAction({
       action: 'CANCEL_ORDER',
@@ -83,13 +103,11 @@ export class OrdersService {
       ipAddress,
     });
 
-    return response.data;
+    return data;
   }
 
-  async getStats(adminId: string, ipAddress?: string) {
-    const response = await axios.get(`${config.orderService.url}/api/v1/admin/orders/stats`, {
-      headers: { 'x-user-id': adminId },
-    });
+  async getStats(adminId: string, ipAddress?: string, adminToken?: string) {
+    const data = await callGateway<unknown>('get', '/api/v1/admin/orders/stats', { adminToken });
 
     await dashboardService.logAction({
       action: 'VIEW_ORDER_STATS',
@@ -98,7 +116,7 @@ export class OrdersService {
       ipAddress,
     });
 
-    return response.data;
+    return data;
   }
 }
 
