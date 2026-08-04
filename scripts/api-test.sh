@@ -9,6 +9,7 @@ set -euo pipefail
 #   TOKEN=xxx bash scripts/api-test.sh                    # use existing token
 #   AUTH_EMAIL=x@y.com AUTH_PASSWORD=pass bash scripts/api-test.sh  # login only
 #   BASE_URL=http://localhost:3000 bash scripts/api-test.sh  # custom gateway URL
+#   ADMIN_TOKEN=xxx bash scripts/api-test.sh                 # verify admin endpoints
 # ──────────────────────────────────────────────────────────────
 
 BASE_URL="${BASE_URL:-http://localhost:3000}"
@@ -26,6 +27,10 @@ TOKEN="${TOKEN:-}"
 REFRESH_TOKEN="${REFRESH_TOKEN:-}"
 AUTH_EMAIL="${AUTH_EMAIL:-}"
 AUTH_PASSWORD="${AUTH_PASSWORD:-}"
+# ADMIN_TOKEN — when provided, verify that admin-only endpoints actually
+# respond 200 (not just that non-admin tokens get 403). Used to detect
+# the "admin middleware calls a missing endpoint" bug fixed in PR #9.
+ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
 green()  { printf "\033[32m%s\033[0m\n" "$1"; }
 red()    { printf "\033[31m%s\033[0m\n" "$1"; }
@@ -635,6 +640,20 @@ test_admin_service() {
   test_endpoint "GET" "/api/v1/admin/settings/${TEST_UUID}" "Admin get setting (forbidden)" "403" "$TOKEN"
   test_endpoint "PUT" "/api/v1/admin/settings" "Admin update settings (forbidden)" "403" "$TOKEN" "{}"
   test_endpoint "DELETE" "/api/v1/admin/settings/${TEST_UUID}" "Admin delete setting (forbidden)" "403" "$TOKEN"
+
+  # Positive path: when an admin token is supplied, these endpoints must
+  # actually return 200 — guards against the "admin middleware calls a
+  # missing endpoint" regression (PR #9). Skipped silently when ADMIN_TOKEN
+  # is unset so this script stays runnable in lower environments.
+  if [ -n "$ADMIN_TOKEN" ]; then
+    test_endpoint "GET" "/api/v1/admin/dashboard/stats" "Admin dashboard stats (admin token)" "200" "$ADMIN_TOKEN"
+    test_endpoint "GET" "/api/v1/admin/users" "Admin list users (admin token)" "200" "$ADMIN_TOKEN"
+    test_endpoint "GET" "/api/v1/admin/orders" "Admin list orders (admin token)" "200" "$ADMIN_TOKEN"
+    test_endpoint "GET" "/api/v1/admin/products" "Admin list products (admin token)" "200" "$ADMIN_TOKEN"
+    test_endpoint "GET" "/api/v1/admin/settings" "Admin get settings (admin token)" "200" "$ADMIN_TOKEN"
+  else
+    yellow "  → ADMIN_TOKEN unset — skipping admin-positive assertions"
+  fi
 }
 
 # ──────────────────────────────────────────────────────────────

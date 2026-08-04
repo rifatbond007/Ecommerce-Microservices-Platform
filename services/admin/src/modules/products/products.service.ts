@@ -4,8 +4,34 @@ import { NotFoundError } from '../../utils/errors';
 import { dashboardService } from '../dashboard/dashboard.service';
 import type { UpdateProductInput, ProductQueryInput } from './products.types';
 
+/**
+ * Admin → source-service inter-service calls.
+ *
+ * See users.service.ts for the rationale behind the
+ * `x-internal-admin-call` header pattern.
+ */
+const INTERNAL_HEADER = { 'x-internal-admin-call': 'true' };
+
+async function callGateway<T>(method: 'get' | 'post' | 'put' | 'delete', path: string, opts: {
+  params?: Record<string, unknown>;
+  data?: unknown;
+  adminToken?: string;
+} = {}): Promise<T> {
+  const headers: Record<string, string> = { ...INTERNAL_HEADER };
+  if (opts.adminToken) headers.Authorization = `Bearer ${opts.adminToken}`;
+  const response = await axios.request({
+    method,
+    url: `${config.gateway.url}${path}`,
+    params: opts.params,
+    data: opts.data,
+    headers,
+    timeout: 10000,
+  });
+  return response.data as T;
+}
+
 export class ProductsService {
-  async findAll(query: ProductQueryInput, adminId: string, ipAddress?: string) {
+  async findAll(query: ProductQueryInput, adminId: string, ipAddress?: string, adminToken?: string) {
     const params = {
       page: query.page,
       limit: query.limit,
@@ -15,10 +41,7 @@ export class ProductsService {
       ...(query.isFeatured !== undefined && { isFeatured: query.isFeatured }),
     };
 
-    const response = await axios.get(`${config.productService.url}/api/v1/admin/products`, {
-      params,
-      headers: { 'x-user-id': adminId },
-    });
+    const data = await callGateway<unknown>('get', '/api/v1/admin/products', { params, adminToken });
 
     await dashboardService.logAction({
       action: 'VIEW_PRODUCTS',
@@ -28,15 +51,13 @@ export class ProductsService {
       ipAddress,
     });
 
-    return response.data;
+    return data;
   }
 
-  async findById(productId: string, adminId: string, ipAddress?: string) {
-    const response = await axios.get(`${config.productService.url}/api/v1/products/${productId}`, {
-      headers: { 'x-user-id': adminId },
-    });
+  async findById(productId: string, adminId: string, ipAddress?: string, adminToken?: string) {
+    const data: any = await callGateway<unknown>('get', `/api/v1/admin/products/${productId}`, { adminToken });
 
-    if (!response.data.data) {
+    if (!data?.data) {
       throw new NotFoundError('Product');
     }
 
@@ -48,13 +69,11 @@ export class ProductsService {
       ipAddress,
     });
 
-    return response.data;
+    return data;
   }
 
-  async update(productId: string, input: UpdateProductInput, adminId: string, ipAddress?: string) {
-    const response = await axios.put(`${config.productService.url}/api/v1/admin/products/${productId}`, input, {
-      headers: { 'x-user-id': adminId },
-    });
+  async update(productId: string, input: UpdateProductInput, adminId: string, ipAddress?: string, adminToken?: string) {
+    const data = await callGateway<unknown>('put', `/api/v1/admin/products/${productId}`, { data: input, adminToken });
 
     await dashboardService.logAction({
       action: 'UPDATE_PRODUCT',
@@ -65,13 +84,11 @@ export class ProductsService {
       ipAddress,
     });
 
-    return response.data;
+    return data;
   }
 
-  async delete(productId: string, adminId: string, ipAddress?: string) {
-    await axios.delete(`${config.productService.url}/api/v1/admin/products/${productId}`, {
-      headers: { 'x-user-id': adminId },
-    });
+  async delete(productId: string, adminId: string, ipAddress?: string, adminToken?: string) {
+    await callGateway<unknown>('delete', `/api/v1/admin/products/${productId}`, { adminToken });
 
     await dashboardService.logAction({
       action: 'DELETE_PRODUCT',
@@ -84,18 +101,16 @@ export class ProductsService {
     return { success: true, message: 'Product deleted successfully' };
   }
 
-  async toggleActive(productId: string, adminId: string, ipAddress?: string) {
-    const product = await this.findById(productId, adminId, ipAddress);
-    const isActive = !product.data.isActive;
-    
-    return this.update(productId, { isActive }, adminId, ipAddress);
+  async toggleActive(productId: string, adminId: string, ipAddress?: string, adminToken?: string) {
+    const product: any = await this.findById(productId, adminId, ipAddress, adminToken);
+    const isActive = !product?.data?.isActive;
+    return this.update(productId, { isActive }, adminId, ipAddress, adminToken);
   }
 
-  async toggleFeatured(productId: string, adminId: string, ipAddress?: string) {
-    const product = await this.findById(productId, adminId, ipAddress);
-    const isFeatured = !product.data.isFeatured;
-    
-    return this.update(productId, { isFeatured }, adminId, ipAddress);
+  async toggleFeatured(productId: string, adminId: string, ipAddress?: string, adminToken?: string) {
+    const product: any = await this.findById(productId, adminId, ipAddress, adminToken);
+    const isFeatured = !product?.data?.isFeatured;
+    return this.update(productId, { isFeatured }, adminId, ipAddress, adminToken);
   }
 }
 
