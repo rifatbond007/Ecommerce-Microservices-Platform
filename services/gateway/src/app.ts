@@ -18,9 +18,31 @@ export const createApp = (): Application => {
   app.use(helmet());
 
   // CORS — single source of truth at the gateway.
+  // We wrap the default `cors` middleware so that a rejected origin returns
+  // the canonical error envelope (and logs the offending origin) instead of
+  // the library's opaque "Not allowed by CORS" 403. The wrapper still defers
+  // to the real middleware for allowed origins.
   app.use(
     cors({
-      origin: config.cors.origin,
+      origin: (origin, callback) => {
+        // Same-origin / curl / server-to-server requests have no Origin header
+        // — always allow them.
+        if (!origin) return callback(null, true);
+
+        const allowed = config.cors.origin;
+        const allowedOrigins = Array.isArray(allowed)
+          ? allowed
+          : allowed.split(',').map((o) => o.trim()).filter(Boolean);
+
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+          return callback(null, true);
+        }
+
+        // Rejected — log it and surface a helpful message instead of the
+        // generic "Not allowed by CORS" string.
+        logger.warn(`CORS: rejected origin "${origin}". Allowed: ${allowedOrigins.join(', ')}`);
+        return callback(new Error(`Origin not allowed: ${origin}`), false);
+      },
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Request-Id'],
       exposedHeaders: ['X-Request-Id', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],

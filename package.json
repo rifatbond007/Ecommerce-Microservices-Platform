@@ -15,13 +15,13 @@
     "dev:cart": "npm run dev --workspace=services/cart",
     "dev:order": "npm run dev --workspace=services/order",
     "dev:payment": "npm run dev --workspace=services/payment",
-    "dev:notification": "npm run dev --workspace=services/notification",
-    "dev:search": "npm run dev --workspace=services/search",
-    "dev:admin": "npm run dev --workspace=services/admin",
-    "dev:all": "concurrently \"npm run dev:*\"",
+    "dev:all": "concurrently \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:product\" \"npm run dev:cart\" \"npm run dev:order\" \"npm run dev:payment\"",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
-    "lint": "npm run lint --workspaces"
+    "lint": "npm run lint --workspaces",
+    "dev:native": "bash scripts/dev.sh",
+    "dev:native:status": "bash scripts/dev.sh status",
+    "dev:native:stop": "bash scripts/dev.sh stop"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
