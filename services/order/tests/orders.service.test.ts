@@ -35,6 +35,11 @@ jest.mock('../src/config', () => ({
     cartService: { url: 'http://localhost:3004' },
     authService: { url: 'http://localhost:3001' },
     tax: { rate: 0.1 },
+    interService: {
+      secret: 'test-inter-service-secret',
+      keyId: 'v1',
+      clockSkewSeconds: 60,
+    },
   },
 }));
 
