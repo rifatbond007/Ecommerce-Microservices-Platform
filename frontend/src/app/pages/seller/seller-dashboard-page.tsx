@@ -30,27 +30,38 @@ const statCards = [
     label: 'Total Products',
     icon: Package,
     value: (s: { products: number }) => s.products,
-    gradient: 'from-indigo-500 to-blue-600',
-    lightBg: 'bg-indigo-50',
   },
   {
     label: 'Total Orders',
     icon: ShoppingCart,
     value: (s: { orders: number }) => s.orders,
-    gradient: 'from-amber-500 to-orange-600',
-    lightBg: 'bg-amber-50',
   },
   {
     label: 'Revenue',
     icon: DollarSign,
     value: (s: { revenue: number }) => `$${s.revenue.toFixed(2)}`,
-    gradient: 'from-emerald-500 to-teal-600',
-    lightBg: 'bg-emerald-50',
+  },
+  {
+    label: 'Rating',
+    icon: TrendingUp,
+    value: (s: { rating: number }) => s.rating?.toFixed(1) ?? '—',
   },
 ];
 
+interface SellerStats {
+  products: number;
+  orders: number;
+  revenue: number;
+  rating: number;
+}
+
 export function SellerDashboardPage() {
-  const [stats, setStats] = useState({ products: 0, orders: 0, revenue: 0 });
+  const [stats, setStats] = useState<SellerStats>({
+    products: 0,
+    orders: 0,
+    revenue: 0,
+    rating: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -58,10 +69,15 @@ export function SellerDashboardPage() {
     let cancelled = false;
     const fetchStats = async () => {
       try {
-        const productsRes = await sellerApi.getProducts();
+        const res = await sellerApi.getStats();
         if (cancelled) return;
-        const products = productsRes.data.products?.length || 0;
-        setStats({ products, orders: 0, revenue: 0 });
+        const data = (res.data ?? {}) as Partial<SellerStats>;
+        setStats({
+          products: data.products ?? 0,
+          orders: data.orders ?? 0,
+          revenue: data.revenue ?? 0,
+          rating: data.rating ?? 0,
+        });
       } catch {
         if (!cancelled) setError('Failed to load dashboard stats');
       } finally {
@@ -114,33 +130,31 @@ export function SellerDashboardPage() {
         </motion.p>
       )}
 
-      <motion.div variants={itemVariants} className="grid md:grid-cols-3 gap-6 mb-8">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
-            <Card key={card.label} className="overflow-hidden border-0 shadow-sm">
-              <CardContent className="p-0">
-                <div className={`bg-gradient-to-br ${card.gradient} p-6`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium text-white/80">{card.label}</p>
-                    <Icon className="h-5 w-5 text-white/70" />
-                  </div>
-                  <p className="text-3xl font-bold text-white">{card.value(stats)}</p>
+            <Card key={card.label}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{card.label}</p>
+                  <Icon className="h-4 w-4 text-muted-foreground" />
                 </div>
+                <p className="text-3xl font-bold tracking-tight">{card.value(stats)}</p>
               </CardContent>
             </Card>
           );
         })}
       </motion.div>
 
-      <motion.div variants={itemVariants} className="flex gap-4">
+      <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
         <Link to="/seller/products">
-          <Button size="lg" className="rounded-full">
+          <Button size="lg">
             <Package className="mr-2 h-4 w-4" /> Manage Products
           </Button>
         </Link>
         <Link to="/seller/products">
-          <Button variant="outline" size="lg" className="rounded-full">
+          <Button variant="outline" size="lg">
             <Plus className="mr-2 h-4 w-4" /> Add Product
           </Button>
         </Link>

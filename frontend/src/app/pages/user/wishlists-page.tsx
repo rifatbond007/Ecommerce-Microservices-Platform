@@ -66,8 +66,8 @@ export function WishlistsPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-12">
-        <div className="border border-[#e5e5e5] bg-white p-8 text-center">
-          <p className="text-xs text-[#666666] uppercase tracking-wider">Loading...</p>
+        <div className="border border-border bg-background p-8 text-center">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Loading...</p>
         </div>
       </div>
     );
@@ -75,12 +75,12 @@ export function WishlistsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12">
-      <div className="border border-[#e5e5e5] bg-white">
-        <div className="px-8 py-12 border-b border-[#e5e5e5]">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+      <div className="border border-border bg-background">
+        <div className="px-8 py-12 border-b border-border">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
             Saved Items
           </p>
-          <h1 className="mt-3 text-2xl md:text-3xl font-bold text-[#111111]">
+          <h1 className="mt-3 text-2xl md:text-3xl font-bold text-foreground">
             My Wishlist
           </h1>
         </div>
@@ -108,11 +108,11 @@ export function WishlistsPage() {
                 return (
                   <Card key={item.id} className="group">
                     <Link to={`/products/${item.productId}`}>
-                      <div className="aspect-square bg-[#f5f5f5] overflow-hidden">
+                      <div className="aspect-square bg-muted overflow-hidden">
                         {product?.images?.[0] ? (
                           <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:opacity-90 transition-opacity duration-300" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#666666] text-xs font-bold uppercase tracking-wider">
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-bold uppercase tracking-wider">
                             No Image
                           </div>
                         )}
@@ -120,12 +120,12 @@ export function WishlistsPage() {
                     </Link>
                     <CardContent className="p-4">
                       <Link to={`/products/${item.productId}`}>
-                        <h3 className="text-sm font-bold text-[#111111] truncate uppercase tracking-wider">
+                        <h3 className="text-sm font-bold text-foreground truncate uppercase tracking-wider">
                           {product?.name || 'Product'}
                         </h3>
                       </Link>
                       {product?.basePrice && (
-                        <p className="mt-2 text-base font-bold text-[#111111]">
+                        <p className="mt-2 text-base font-bold text-foreground">
                           ${parseFloat(product.basePrice).toFixed(2)}
                         </p>
                       )}
@@ -147,8 +147,8 @@ export function WishlistsPage() {
           </div>
         )}
 
-        <div className="px-8 py-4 bg-[#fafafa] border-t border-[#e5e5e5] text-center">
-          <p className="text-xs text-[#777777] uppercase tracking-wider">
+        <div className="px-8 py-4 bg-muted border-t border-border text-center">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">
             Market — My Wishlist
           </p>
         </div>

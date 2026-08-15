@@ -90,15 +90,11 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: async () => {
-        try {
-          const cartId = get().cartId;
-          if (cartId) {
-            await cartApi.clearCart(cartId);
-          }
-          set({ items: [], cartId: null });
-        } catch (error) {
-          throw error;
+        const cartId = get().cartId;
+        if (cartId) {
+          await cartApi.clearCart(cartId);
         }
+        set({ items: [], cartId: null });
       },
 
       getTotal: () => {
