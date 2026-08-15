@@ -3,6 +3,7 @@ import { config } from '../../config';
 import { orderRepository } from '../../repositories';
 import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
+import { buildSignedHeaders } from '../../utils/sign';
 import type { CreateOrderInput, UpdateOrderStatusInput, CreateReturnInput } from './orders.types';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -40,8 +41,16 @@ export class OrdersService {
 
   async createOrder(userId: string, input: CreateOrderInput) {
     try {
-      const cartResponse = await axios.get(`${config.cartService.url}/api/v1/carts/${input.cartId}`, {
-        headers: { 'x-user-id': userId },
+      const cartPath = `/api/v1/carts/${input.cartId}`;
+      const cartResponse = await axios.get(`${config.cartService.url}${cartPath}`, {
+        headers: {
+          ...buildSignedHeaders({
+            method: 'GET',
+            path: cartPath,
+            body: '',
+          }),
+          'x-user-id': userId,
+        },
       });
 
       const cart = cartResponse.data.data;
@@ -145,25 +154,41 @@ export class OrdersService {
       throw new ValidationError('Can only return delivered orders');
     }
 
-    const orderItem = order.items.find((item: { id: string }) => item.id === input.orderItemId);
-    if (!orderItem) {
-      throw new NotFoundError('Order item');
+    const createdReturns = [];
+    for (const returnItem of input.items) {
+      const orderItem = order.items.find(
+        (item: { productId: string; quantity: number }) =>
+          item.productId === returnItem.productId && item.quantity >= returnItem.quantity
+      );
+      if (!orderItem) {
+        throw new NotFoundError(
+          `Order item for product ${returnItem.productId} with sufficient quantity`
+        );
+      }
+
+      if (returnItem.quantity > orderItem.quantity) {
+        throw new ValidationError(
+          `Return quantity exceeds ordered quantity for product ${returnItem.productId}`
+        );
+      }
+
+      const returnRecord = await orderRepository.createReturn(
+        orderId,
+        orderItem.id,
+        returnItem.quantity,
+        input.reason
+      );
+      createdReturns.push(returnRecord);
+      logger.info('Return created', {
+        orderId,
+        returnId: returnRecord.id,
+        orderItemId: orderItem.id,
+        productId: returnItem.productId,
+        quantity: returnItem.quantity,
+      });
     }
 
-    if (input.quantity > orderItem.quantity) {
-      throw new ValidationError('Return quantity exceeds ordered quantity');
-    }
-
-    const returnRecord = await orderRepository.createReturn(
-      orderId,
-      input.orderItemId,
-      input.quantity,
-      input.reason
-    );
-
-    logger.info('Return created', { orderId, returnId: returnRecord.id });
-
-    return returnRecord;
+    return createdReturns;
   }
 
   async getOrdersByUserId(userId: string, limit: number, offset: number) {

@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Force .env to override anything in process.env. Same fix as the gateway,
+// auth, and the rest of the services — see PUKU.md "ts-node-dev env-collision
+// gotcha".
+dotenv.config({ override: true });
 
 
 // Fail-fast: refuse to boot in production without a real JWT_SECRET.
@@ -30,6 +33,35 @@ if (
   process.exit(1);
 }
 
+// INTER_SERVICE_SECRET — shared HMAC key used to verify that requests
+// reaching this service originated from the gateway (not an attacker
+// forging identity headers on the internal network). See
+// services/admin/src/utils/verify.ts for the verifier.
+const INTER_SERVICE_SECRET_PLACEHOLDER = '__SETME_INTER_SERVICE_SECRET_IN_PROD__';
+const interServiceSecret =
+  process.env.INTER_SERVICE_SECRET || INTER_SERVICE_SECRET_PLACEHOLDER;
+
+if (isProd && interServiceSecret === INTER_SERVICE_SECRET_PLACEHOLDER) {
+  // eslint-disable-next-line no-console
+  console.error(
+    'FATAL: INTER_SERVICE_SECRET is missing or still a placeholder. ' +
+      'Refusing to start in production. The same secret must be set across all ' +
+      '10 services + gateway.'
+  );
+  process.exit(1);
+}
+
+if (
+  interServiceSecret === INTER_SERVICE_SECRET_PLACEHOLDER &&
+  !isProd
+) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[admin] WARNING: INTER_SERVICE_SECRET is not set; using the dev placeholder. ' +
+      'In production, every signed request will be rejected with INTER_SERVICE_SIGNATURE_INVALID.'
+  );
+}
+
 
 
 export const config = {
@@ -53,6 +85,14 @@ export const config = {
     url: process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
   },
 
+  // The gateway URL is the canonical entry point for inter-service calls
+  // because it's the single source of truth for JWT verification and
+  // routing. See services/admin/src/modules/{users,orders,products}/*.service.ts
+  // for the `x-internal-admin-call` header pattern that uses it.
+  gateway: {
+    url: process.env.GATEWAY_URL || 'http://localhost:3000',
+  },
+
   userService: {
     url: process.env.USER_SERVICE_URL || 'http://localhost:3002',
   },
@@ -68,5 +108,14 @@ export const config = {
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  },
+
+  interService: {
+    secret: interServiceSecret,
+    keyId: process.env.INTER_SERVICE_KEY_ID || 'v1',
+    clockSkewSeconds: parseInt(
+      process.env.INTER_SERVICE_CLOCK_SKEW_SECONDS || '60',
+      10
+    ),
   },
 };

@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/search';
 import prisma from './prisma.client';
 import { logger } from '../utils/logger';
 

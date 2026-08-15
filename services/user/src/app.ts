@@ -2,7 +2,7 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import routes from './routes';
-import { errorHandler, notFoundHandler } from './middleware';
+import { errorHandler, notFoundHandler, verifyInterService } from './middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { prisma } from './repositories/prisma.client';
@@ -14,10 +14,19 @@ export const createApp = (): Express => {
   app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
   }));
-  app.use(express.json());
+  // Capture raw body bytes for inter-service HMAC verification. Mirrors
+  // the gateway's pattern.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true }));
 
   // /live = process-up only (LB restart decisions).
@@ -34,7 +43,9 @@ export const createApp = (): Express => {
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  app.use('/api/v1', routes);
+  // Gate every /api/v1/* request on a valid inter-service HMAC. No
+  // allow-list — every user endpoint is gated.
+  app.use('/api/v1', verifyInterService, routes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

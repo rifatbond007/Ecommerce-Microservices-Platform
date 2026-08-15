@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/user';
 import { profileRepository } from '../../repositories';
 import { NotFoundError, ConflictError } from '../../utils/errors';
 import { logger } from '../../utils/logger';

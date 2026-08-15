@@ -2,14 +2,13 @@ import { Response, NextFunction } from 'express';
 import { sellersService } from './sellers.service';
 import { AuthenticatedRequest } from '../../middleware';
 
-export class SellersController {
-  private getToken(req: AuthenticatedRequest): string {
-    return req.headers.authorization?.replace('Bearer ', '') || '';
-  }
+const getToken = (req: AuthenticatedRequest): string =>
+  req.headers.authorization?.replace('Bearer ', '') || '';
 
+export class SellersController {
   async getSellerStatus(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const status = await sellersService.getSellerStatus(this.getToken(req));
+      const status = await sellersService.getSellerStatus(getToken(req));
       res.status(200).json({ success: true, data: status });
     } catch (error) {
       next(error);
@@ -18,7 +17,7 @@ export class SellersController {
 
   async requestSeller(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      await sellersService.requestSeller(this.getToken(req));
+      await sellersService.requestSeller(getToken(req));
       res.status(200).json({
         success: true,
         message: 'Seller request submitted successfully',
@@ -30,7 +29,7 @@ export class SellersController {
 
   async getSellerRequests(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const requests = await sellersService.getSellerRequests(this.getToken(req));
+      const requests = await sellersService.getSellerRequests(getToken(req));
       res.status(200).json({ success: true, data: requests });
     } catch (error) {
       next(error);
@@ -40,7 +39,7 @@ export class SellersController {
   async approveSeller(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { userId } = req.params;
-      await sellersService.approveSeller(this.getToken(req), userId);
+      await sellersService.approveSeller(getToken(req), userId);
       res.status(200).json({
         success: true,
         message: 'Seller approved successfully',
@@ -53,7 +52,7 @@ export class SellersController {
   async rejectSeller(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { userId } = req.params;
-      await sellersService.rejectSeller(this.getToken(req), userId);
+      await sellersService.rejectSeller(getToken(req), userId);
       res.status(200).json({
         success: true,
         message: 'Seller request rejected',

@@ -35,6 +35,11 @@ jest.mock('../src/config', () => ({
     cartService: { url: 'http://localhost:3004' },
     authService: { url: 'http://localhost:3001' },
     tax: { rate: 0.1 },
+    interService: {
+      secret: 'test-inter-service-secret',
+      keyId: 'v1',
+      clockSkewSeconds: 60,
+    },
   },
 }));
 
@@ -272,9 +277,8 @@ describe('OrdersService', () => {
 
       const { ordersService } = await import('../src/modules/orders/orders.service');
       const result = await ordersService.createReturn('order-1', 'user-1', {
-        orderItemId: 'item-1',
-        quantity: 1,
         reason: 'Defective',
+        items: [{ productId: 'prod-1', quantity: 1 }],
       });
 
       expect(result).toBeDefined();
@@ -292,12 +296,11 @@ describe('OrdersService', () => {
       mockFindById.mockResolvedValue(mockOrder);
 
       const { ordersService } = await import('../src/modules/orders/orders.service');
-      
+
       await expect(
         ordersService.createReturn('order-1', 'user-1', {
-          orderItemId: 'item-1',
-          quantity: 1,
           reason: 'Defective',
+          items: [{ productId: 'prod-1', quantity: 1 }],
         })
       ).rejects.toThrow('Can only return delivered orders');
     });

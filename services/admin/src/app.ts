@@ -2,7 +2,12 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import routes from './routes';
-import { errorHandler, notFoundHandler } from './middleware';
+import {
+  errorHandler,
+  notFoundHandler,
+  internalAdminCallGuard,
+  verifyInterService,
+} from './middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import prisma from './repositories/prisma.client';
@@ -14,10 +19,18 @@ export const createApp = (): Express => {
   app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true,
   }));
-  app.use(express.json());
+  // Capture raw body bytes for inter-service HMAC verification.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true }));
 
   // /live = process-up only (LB restart decisions).
@@ -34,7 +47,17 @@ export const createApp = (): Express => {
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  app.use('/api/v1/admin', routes);
+  // Loop-break guard for internal admin calls (Bug 3 fix). Runs BEFORE
+  // the inter-service verifier so internal gateway calls (which the
+  // gateway will sign) don't double-verify; the guard short-circuits
+  // them by fetching the source-service data directly.
+  // See services/admin/src/middleware/internal-call.ts.
+  //
+  // Then the inter-service HMAC verifier gates every other admin
+  // request so an attacker who reaches this port directly cannot
+  // forge x-user-id headers.
+  app.use('/api/v1/admin', internalAdminCallGuard);
+  app.use('/api/v1/admin', verifyInterService, routes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { savedCartsController } from './saved-carts.controller';
 import { authenticate } from '../../middleware';
-import { validate } from '../../utils/validate';
+import { validate, validateParams } from '../../utils/validate';
 import { createSavedCartSchema, updateSavedCartSchema, savedCartIdSchema } from './saved-carts.validator';
 
 const router = Router();
@@ -44,7 +44,7 @@ router.get('/', authenticate, savedCartsController.getSavedCarts);
  *       404:
  *         description: Saved cart not found
  */
-router.get('/:id', authenticate, validate(savedCartIdSchema), savedCartsController.getSavedCartById);
+router.get('/:id', authenticate, validateParams(savedCartIdSchema), savedCartsController.getSavedCartById);
 
 /**
  * @swagger
@@ -96,7 +96,7 @@ router.post('/', authenticate, validate(createSavedCartSchema), savedCartsContro
  *       404:
  *         description: Saved cart not found
  */
-router.post('/:id/restore', authenticate, validate(savedCartIdSchema), savedCartsController.restoreSavedCart);
+router.post('/:id/restore', authenticate, validateParams(savedCartIdSchema), savedCartsController.restoreSavedCart);
 
 /**
  * @swagger
@@ -155,6 +155,6 @@ router.put('/:id', authenticate, validate(updateSavedCartSchema), savedCartsCont
  *       404:
  *         description: Saved cart not found
  */
-router.delete('/:id', authenticate, validate(savedCartIdSchema), savedCartsController.deleteSavedCart);
+router.delete('/:id', authenticate, validateParams(savedCartIdSchema), savedCartsController.deleteSavedCart);
 
 export default router;

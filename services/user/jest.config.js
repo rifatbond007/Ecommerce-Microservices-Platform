@@ -8,6 +8,9 @@ module.exports = {
     '!src/index.ts',
   ],
   coverageDirectory: 'coverage',
+  moduleNameMapper: {
+    '^@prisma/user$': '<rootDir>/node_modules/.prisma/user',
+  },
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: 'tsconfig.test.json',

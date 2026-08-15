@@ -71,7 +71,8 @@ export class CartsController {
   async applyCoupon(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { cartId } = req.params;
-      const { couponCode } = req.body;
+      // Prefer `code` (api-test contract), fall back to legacy `couponCode`.
+      const couponCode = req.body.code ?? req.body.couponCode;
       const cart = await cartsService.applyCoupon(cartId, couponCode);
       res.status(200).json({ success: true, data: cart });
     } catch (error) {

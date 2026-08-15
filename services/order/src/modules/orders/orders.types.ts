@@ -22,7 +22,9 @@ export interface UpdateOrderStatusInput {
 }
 
 export interface CreateReturnInput {
-  orderItemId: string;
-  quantity: number;
   reason: string;
+  items: {
+    productId: string;
+    quantity: number;
+  }[];
 }

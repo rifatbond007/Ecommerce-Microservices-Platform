@@ -1,6 +1,13 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Force .env to override service settings that may be inherited from a stale
+// ts-node-dev process, but preserve NODE_ENV because test runners and process
+// managers use it to describe the current runtime environment.
+const runtimeNodeEnv = process.env.NODE_ENV;
+dotenv.config({ override: true });
+if (runtimeNodeEnv) {
+  process.env.NODE_ENV = runtimeNodeEnv;
+}
 
 
 // Fail-fast: refuse to boot in production without a real JWT_SECRET.
@@ -28,6 +35,35 @@ if (
       'Refusing to start in production. Set a real 32+ byte secret (e.g., `openssl rand -base64 48`).'
   );
   process.exit(1);
+}
+
+// INTER_SERVICE_SECRET — shared HMAC key used to verify that requests
+// reaching this service originated from the gateway (not an attacker
+// forging identity headers on the internal network). See
+// services/auth/src/utils/verify.ts for the verifier.
+const INTER_SERVICE_SECRET_PLACEHOLDER = '__SETME_INTER_SERVICE_SECRET_IN_PROD__';
+const interServiceSecret =
+  process.env.INTER_SERVICE_SECRET || INTER_SERVICE_SECRET_PLACEHOLDER;
+
+if (isProd && interServiceSecret === INTER_SERVICE_SECRET_PLACEHOLDER) {
+  // eslint-disable-next-line no-console
+  console.error(
+    'FATAL: INTER_SERVICE_SECRET is missing or still a placeholder. ' +
+      'Refusing to start in production. The same secret must be set across all ' +
+      '10 services + gateway.'
+  );
+  process.exit(1);
+}
+
+if (
+  interServiceSecret === INTER_SERVICE_SECRET_PLACEHOLDER &&
+  !isProd
+) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[auth] WARNING: INTER_SERVICE_SECRET is not set; using the dev placeholder. ' +
+      'In production, every signed request will be rejected with INTER_SERVICE_SIGNATURE_INVALID.'
+  );
 }
 
 
@@ -75,6 +111,15 @@ export const config = {
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
 
+  interService: {
+    secret: interServiceSecret,
+    keyId: process.env.INTER_SERVICE_KEY_ID || 'v1',
+    clockSkewSeconds: parseInt(
+      process.env.INTER_SERVICE_CLOCK_SKEW_SECONDS || '60',
+      10
+    ),
+  },
+
   logging: {
     level: process.env.LOG_LEVEL || 'info',
   },
@@ -99,6 +144,7 @@ export const config = {
 
   app: {
     url: process.env.APP_URL || 'http://localhost:3000',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   },
 
   admin: {
