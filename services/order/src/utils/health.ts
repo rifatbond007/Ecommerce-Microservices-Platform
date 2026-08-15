@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/order';
 
 export interface HealthCheckResult {
   ok: boolean;
