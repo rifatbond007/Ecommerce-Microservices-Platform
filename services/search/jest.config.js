@@ -11,6 +11,9 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   verbose: true,
+  moduleNameMapper: {
+    '^@prisma/search$': '<rootDir>/node_modules/.prisma/search',
+  },
   transform: {
     '^.+\\.ts$': ['ts-jest', {}],
   },

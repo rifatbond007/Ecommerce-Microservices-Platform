@@ -9,11 +9,17 @@ set -euo pipefail
 #   TOKEN=xxx bash scripts/api-test.sh                    # use existing token
 #   AUTH_EMAIL=x@y.com AUTH_PASSWORD=pass bash scripts/api-test.sh  # login only
 #   BASE_URL=http://localhost:3000 bash scripts/api-test.sh  # custom gateway URL
+#   ADMIN_TOKEN=xxx bash scripts/api-test.sh                 # verify admin endpoints
 # ──────────────────────────────────────────────────────────────
 
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 TEST_UUID="00000000-0000-0000-0000-000000000000"
 TEMP_FILE="/tmp/api-test-resp.json"
+# Initialize the temp file so read-only operations (extract_token, extract_refresh)
+# never fail with "No such file or directory" when curl couldn't even open a
+# connection (e.g. gateway down). With `set -euo pipefail`, a missing redirect
+# source terminates the whole script.
+: > "$TEMP_FILE"
 
 PASS=0
 FAIL=0
@@ -26,6 +32,10 @@ TOKEN="${TOKEN:-}"
 REFRESH_TOKEN="${REFRESH_TOKEN:-}"
 AUTH_EMAIL="${AUTH_EMAIL:-}"
 AUTH_PASSWORD="${AUTH_PASSWORD:-}"
+# ADMIN_TOKEN — when provided, verify that admin-only endpoints actually
+# respond 200 (not just that non-admin tokens get 403). Used to detect
+# the "admin middleware calls a missing endpoint" bug fixed in PR #9.
+ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
 green()  { printf "\033[32m%s\033[0m\n" "$1"; }
 red()    { printf "\033[31m%s\033[0m\n" "$1"; }
@@ -125,7 +135,7 @@ setup_auth() {
 {"email": "${AUTH_EMAIL}", "password": "${AUTH_PASSWORD}"}
 EOF
 )
-    curl -s -X POST "${BASE_URL}/api/v1/auth/login" \
+    curl -s --max-time 10 -X POST "${BASE_URL}/api/v1/auth/login" \
       -H "Content-Type: application/json" \
       -d "$login_payload" > "$TEMP_FILE" 2>/dev/null || true
     TOKEN=$(extract_token < "$TEMP_FILE")
@@ -158,7 +168,7 @@ EOF
 )
 
   local code
-  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" -X POST "${BASE_URL}/api/v1/auth/register" \
+  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" --max-time 10 -X POST "${BASE_URL}/api/v1/auth/register" \
     -H "Content-Type: application/json" \
     -d "$reg_payload" 2>/dev/null || echo "000")
 
@@ -171,7 +181,7 @@ EOF
 {"email": "${AUTH_EMAIL}", "password": "${AUTH_PASSWORD}"}
 EOF
 )
-    curl -s -X POST "${BASE_URL}/api/v1/auth/login" \
+    curl -s --max-time 10 -X POST "${BASE_URL}/api/v1/auth/login" \
       -H "Content-Type: application/json" \
       -d "$login_payload" > "$TEMP_FILE" 2>/dev/null || true
     TOKEN=$(extract_token < "$TEMP_FILE")
@@ -635,6 +645,107 @@ test_admin_service() {
   test_endpoint "GET" "/api/v1/admin/settings/${TEST_UUID}" "Admin get setting (forbidden)" "403" "$TOKEN"
   test_endpoint "PUT" "/api/v1/admin/settings" "Admin update settings (forbidden)" "403" "$TOKEN" "{}"
   test_endpoint "DELETE" "/api/v1/admin/settings/${TEST_UUID}" "Admin delete setting (forbidden)" "403" "$TOKEN"
+
+  # Positive path: when an admin token is supplied, these endpoints must
+  # actually return 200 — guards against the "admin middleware calls a
+  # missing endpoint" regression (PR #9). Skipped silently when ADMIN_TOKEN
+  # is unset so this script stays runnable in lower environments.
+  if [ -n "$ADMIN_TOKEN" ]; then
+    test_endpoint "GET" "/api/v1/admin/dashboard/stats" "Admin dashboard stats (admin token)" "200" "$ADMIN_TOKEN"
+    test_endpoint "GET" "/api/v1/admin/users" "Admin list users (admin token)" "200" "$ADMIN_TOKEN"
+    test_endpoint "GET" "/api/v1/admin/orders" "Admin list orders (admin token)" "200" "$ADMIN_TOKEN"
+    test_endpoint "GET" "/api/v1/admin/products" "Admin list products (admin token)" "200" "$ADMIN_TOKEN"
+    test_endpoint "GET" "/api/v1/admin/settings" "Admin get settings (admin token)" "200" "$ADMIN_TOKEN"
+  else
+    yellow "  → ADMIN_TOKEN unset — skipping admin-positive assertions"
+  fi
+}
+
+# ─── INTER-SERVICE HMAC AUTH (closes the x-user-id forgery bypass) ───
+#
+# The gateway signs every proxied request with a shared HMAC key, and each
+# downstream service verifies that signature before honouring x-user-id.
+# This section proves the trust model by hitting downstream service ports
+# DIRECTLY with forged identity headers and asserting the verifier rejects
+# them with INTER_SERVICE_SIGNATURE_INVALID.
+#
+# Run only when GATEWAY_URL or DOWNSTREAM_URL is reachable. We probe
+# http://localhost:3005/api/v1/orders first; if it's down, the section is
+# skipped so the rest of the suite keeps working.
+test_inter_service_auth() {
+  section "INTER-SERVICE HMAC AUTH (downstream port protection)"
+
+  # Use the gateway by default for service URLs. Override with
+  # GATEWAY_URL=<host:port> to test against a non-default deployment.
+  local gateway_host
+  gateway_host="${GATEWAY_URL:-http://localhost:3000}"
+  local order_port="${ORDER_SERVICE_URL:-http://localhost:3005}"
+  local payment_port="${PAYMENT_SERVICE_URL:-http://localhost:3006}"
+
+  # Probe the order port directly (no gateway) to see if the verifier is
+  # even wired up. If the service isn't running, skip.
+  local probe_code
+  probe_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+    -H "x-user-id: probe" \
+    "${order_port}/api/v1/orders" 2>/dev/null || echo "000")
+  if [ "$probe_code" = "000" ]; then
+    yellow "  → Downstream services not reachable on :3005/:3006 — skipping"
+    return
+  fi
+
+  # Negative path 1: forged x-user-id against order-service directly.
+  # Without the inter-service HMAC verifier, this used to return 200/401
+  # depending on the order-service's local header trust. With the verifier,
+  # it MUST return 401 INTER_SERVICE_SIGNATURE_INVALID.
+  local code
+  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" --max-time 5 \
+    -H "x-user-id: forged-user" \
+    -H "x-user-email: attacker@example.com" \
+    -H "x-user-role: admin" \
+    "${order_port}/api/v1/orders" 2>/dev/null || echo "000")
+  if [ "$code" = "401" ]; then
+    PASS=$((PASS + 1))
+    green "  ✓ Order port rejects forged x-user-id (401 INTER_SERVICE_SIGNATURE_INVALID)"
+  else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("Order port accepted forged x-user-id ($code)")
+    red "  ✗ Order port rejected forged x-user-id with $code (expected 401)"
+  fi
+
+  # Negative path 2: payment-service directly. Same expectation.
+  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" --max-time 5 \
+    -H "x-user-id: forged-user" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d '{"orderId":"00000000-0000-0000-0000-000000000000","paymentMethod":"card"}' \
+    "${payment_port}/api/v1/payments/process" 2>/dev/null || echo "000")
+  if [ "$code" = "401" ]; then
+    PASS=$((PASS + 1))
+    green "  ✓ Payment port rejects forged x-user-id (401 INTER_SERVICE_SIGNATURE_INVALID)"
+  else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("Payment port accepted forged x-user-id ($code)")
+    red "  ✗ Payment port rejected forged x-user-id with $code (expected 401)"
+  fi
+
+  # Positive path: when a real user token is used through the gateway,
+  # the downstream service accepts the request (because the gateway signs
+  # it). Only runs if we have a token.
+  if [ -n "$TOKEN" ]; then
+    code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" --max-time 5 \
+      -H "Authorization: Bearer $TOKEN" \
+      "${gateway_host}/api/v1/orders" 2>/dev/null || echo "000")
+    if [ "$code" = "200" ]; then
+      PASS=$((PASS + 1))
+      green "  ✓ Gateway-signed request reaches order-service (200)"
+    else
+      FAIL=$((FAIL + 1))
+      FAILED_TESTS+=("Gateway-signed request to order-service failed ($code)")
+      red "  ✗ Gateway-signed request to order-service returned $code (expected 200)"
+    fi
+  else
+    yellow "  → TOKEN unset — skipping gateway-signed positive-path test"
+  fi
 }
 
 # ──────────────────────────────────────────────────────────────
@@ -686,6 +797,7 @@ main() {
   test_notification_service
   test_search_service
   test_admin_service
+  test_inter_service_auth
   summary
 }
 

@@ -1,32 +1,62 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Force .env to override anything in process.env — under ts-node-dev we've seen
+// PORT=3006 and RATE_LIMIT_MAX_REQUESTS=100 injected before config runs (no surface
+// found yet, but the symptom is clear: dotenv parsed the right values, but
+// process.env retained conflicting values). Override=true keeps .env authoritative.
+dotenv.config({ override: true });
 
-// Fail-fast: refuse to boot in production without a real JWT_SECRET.
-// Catches: unset, empty, the literal placeholder string still in some .env
-// files, and any new placeholder prefix added by .env.example.
-const JWT_PLACEHOLDERS = [
-  '__SETME_',
-  '__SET_ME_',
-  'your-super-secret-jwt-key-change-in-production',
-  'your-super-secret-refresh-token-key-change-in-production',
-  'your-secret-key',
-  'your-super-secret-jwt-key',
-  'your-super-secret-refresh-token-key',
-];
-const isProd = process.env.NODE_ENV === 'production';
-const jwtSecret = process.env.JWT_SECRET;
+const JWT_PLACEHOLDER = 'your-super-secret-jwt-key-change-in-production';
+const jwtSecret = process.env.JWT_SECRET || JWT_PLACEHOLDER;
+
+if (process.env.NODE_ENV === 'production' && jwtSecret === JWT_PLACEHOLDER) {
+  throw new Error(
+    'JWT_SECRET is not set. Refusing to start in production with the default secret — ' +
+      'any caller could forge tokens.'
+  );
+}
+
+if (jwtSecret === JWT_PLACEHOLDER && process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[gateway] WARNING: JWT_SECRET is not set; using the dev placeholder. ' +
+      'This is fine for local development but MUST be set in any deployed environment.'
+  );
+}
+
+// INTER_SERVICE_SECRET — HMAC key shared with every downstream service so
+// the gateway can sign requests and downstream services can verify that
+// requests reaching their ports originated from the gateway (not an
+// attacker forging x-user-id headers on the internal network). See
+// services/gateway/src/utils/sign.ts and services/*/src/utils/verify.ts.
+const INTER_SERVICE_SECRET_PLACEHOLDER =
+  '__SETME_INTER_SERVICE_SECRET_IN_PROD__';
+const interServiceSecret =
+  process.env.INTER_SERVICE_SECRET || INTER_SERVICE_SECRET_PLACEHOLDER;
+
 if (
-  isProd &&
-  (!jwtSecret ||
-    JWT_PLACEHOLDERS.some((p) => jwtSecret === p || jwtSecret.startsWith(p)))
+  process.env.NODE_ENV === 'production' &&
+  interServiceSecret === INTER_SERVICE_SECRET_PLACEHOLDER
 ) {
   // eslint-disable-next-line no-console
   console.error(
-    'FATAL: JWT_SECRET is missing or still a placeholder. ' +
-      'Refusing to start in production. Set a real 32+ byte secret (e.g., `openssl rand -base64 48`).'
+    'FATAL: INTER_SERVICE_SECRET is missing or still a placeholder. ' +
+      'Refusing to start in production. Generate one with `openssl rand -base64 48` ' +
+      'and share it across all services.'
   );
   process.exit(1);
+}
+
+if (
+  interServiceSecret === INTER_SERVICE_SECRET_PLACEHOLDER &&
+  process.env.NODE_ENV !== 'production'
+) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[gateway] WARNING: INTER_SERVICE_SECRET is not set; using the dev placeholder. ' +
+      'In production, downstream services will reject every proxied request with ' +
+      'INTER_SERVICE_SIGNATURE_INVALID. Set the same secret in all 10 services.'
+  );
 }
 
 export const config = {
@@ -56,7 +86,7 @@ export const config = {
   },
 
   jwt: {
-    secret: process.env.JWT_SECRET || '__SET_ME_JWT_SECRET_IN_PROD__',
+    secret: jwtSecret,
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
   },
 
@@ -75,5 +105,14 @@ export const config = {
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  },
+
+  interService: {
+    secret: interServiceSecret,
+    keyId: process.env.INTER_SERVICE_KEY_ID || 'v1',
+    clockSkewSeconds: parseInt(
+      process.env.INTER_SERVICE_CLOCK_SKEW_SECONDS || '60',
+      10
+    ),
   },
 };

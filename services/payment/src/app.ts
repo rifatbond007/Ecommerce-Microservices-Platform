@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import routes from './routes';
 import webhooksRoutes from './modules/webhooks/webhooks.route';
-import { errorHandler, notFoundHandler } from './middleware';
+import { errorHandler, notFoundHandler, verifyInterService } from './middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { config } from './config';
@@ -36,15 +36,28 @@ export const createApp = (): Express => {
   // Webhooks must NOT be parsed by express.json() — Stripe signature
   // verification needs the raw body. Mounted at /api/v1/webhooks on the
   // gateway, and the inner rawBodyJson middleware captures the bytes.
+  // The inter-service verifier middleware allow-lists /api/v1/webhooks/*
+  // so Stripe can hit /stripe without an HMAC.
   app.use('/api/v1/webhooks', webhooksRoutes);
 
-  app.use(express.json());
+  // Capture raw body bytes for inter-service HMAC verification on the
+  // rest of /api/v1/payments. Webhooks already used rawBodyJson above.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true }));
 
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  app.use('/api/v1', routes);
+  // Gate every /api/v1/* request on a valid inter-service HMAC. The
+  // middleware allow-lists /api/v1/webhooks/* internally.
+  app.use('/api/v1', verifyInterService, routes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

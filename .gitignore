@@ -44,8 +44,10 @@ postman/cart-service.json
 
 # Personal puku-cli notes
 PUKU.local.md
+PUKU.md
 .puku-cli/worktrees/
 .puku-cli/
+.puku/
 
 # Compiled test artifacts (Jest/ts-jest)
 tests/**/*.js
@@ -62,4 +64,9 @@ tests/**/*.d.ts.map
 *.pem
 *.key
 *.crt
-prisma/generated/
+
+# Prisma client output (regenerated per service via `make setup-<name>` or
+# `npx prisma generate`. The pattern matches at the repo root and inside
+# every services/<name>/ subdir.)
+/prisma/generated/
+**/prisma/generated/

@@ -68,6 +68,7 @@ Or use `make setup-<name>` which does install + generate + push in one step. CI 
 - 6 services have `tsconfig.test.json` (extends tsconfig, `strict: false`): auth, user, cart, payment, notification, search. Missing: gateway, product, order, admin.
 - **Unit tests mock the DB layer** — no Postgres needed locally for `npm run test`. CI does spin up Postgres+Redis for integration checks.
 - Test one file: `npm run test -- --testPathPattern="auth.service.test.ts"` (from service dir)
+- **Gateway has no tests** (only `tests/.gitkeep`). Its `tsconfig.json` uses `strict: false` (unlike most services).
 
 ## Frontend
 
@@ -79,15 +80,26 @@ Tech: react-router-dom, Zustand, Tailwind, shadcn/ui (Radix), Axios, framer-moti
 
 ## CI
 
-`.github/workflows/ci.yml` runs on push/PR to main: **lint** → **typecheck** (build, services one-at-a-time with prisma generate before each) → **test** (unit, no DB) → **frontend build** → **api-test** (full stack, depends on typecheck+test).
+`.github/workflows/ci.yml` runs on push/PR to main: **lint** → **typecheck** (build, services one-at-a-time with prisma generate before each) → **test** (unit + DB) → **frontend build** → **api-test** (full stack, depends on typecheck+test only — not lint or frontend). All 5 jobs run in parallel except api-test.
 
 ## RabbitMQ
 
-Only `search` has a live consumer (`src/events/rabbitmq.service.ts` wired in `app.ts`). Exchange: `product.events` (topic), routing keys `product.*`. `product` and `order` have `amqplib` dep + config but no publish/consume code.
+Three services have live consumers wired into their `index.ts`:
+
+| Service | Exchange | Routing keys consumed | Code location |
+|---------|----------|-----------------------|---------------|
+| search | `product.events` | `product.*` | `src/events/rabbitmq.service.ts` |
+| payment | `ecommerce.events` | `order.created` | `src/utils/rabbitmq.ts` |
+| notification | `ecommerce.events` | `order.created`, `order.status_changed`, `payment.completed`, `payment.failed`, `user.registered` | `src/utils/rabbitmq.ts` |
+
+`payment` also publishes events. `product`, `order`, and `user` have `amqplib` dep + config but no live publish/consume code.
 
 ## Misc
 
-- `packages/` in workspace config (`package.json` workspaces) but directory does not exist
+- `AGENTS.md` is gitignored (`.gitignore` line 11) — not tracked in git
+- `packages/` in root `package.json` workspaces but directory does not exist
+- `planning/` referenced in `README.md` and `docs/ARCHITECTURE.md` but does not exist
+- `docs/CONTRIBUTING.md` references `make verify-deep` which doesn't exist in the Makefile
+- `infra/postgres/init-schemas.sql/` is an empty directory (artifact); the real file is `infra/postgres/init-scripts/init-schemas.sql`
 - All services have `.env.example`; `make setup` auto-copies it to `.env`
-- `docs/` (9 files) is aspirational: references non-existent `packages/`, wrong creds (`ecommerce/ecommerce_dev_password` — actual: `postgres/postgres`). Use code as source of truth.
 - `scripts/seed.sh` bootstraps an admin user via the auth API (requires gateway+auth running)

@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/notification';
 import prisma from './prisma.client';
 
 export class NotificationRepository {

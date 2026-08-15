@@ -5,6 +5,11 @@ import { logger } from '../utils/logger';
 /**
  * Canonical error envelope (matches all other services).
  *    { success: false, error: { code, message, details? } }
+ *
+ * Special case: the `cors` middleware throws a plain Error with message
+ * starting with "Origin not allowed:" when a request is rejected. We unwrap
+ * that here so the client gets a 403 with a structured payload instead of
+ * the library's opaque HTML-ish 403 body.
  */
 export const errorMiddleware = (
   err: Error | AppError,
@@ -12,12 +17,28 @@ export const errorMiddleware = (
   res: Response,
   _next: NextFunction
 ) => {
-  const statusCode = err instanceof AppError ? err.statusCode : 500;
-  const code =
-    (err instanceof AppError && err.errorCode) || 'INTERNAL_SERVER_ERROR';
-  const message = err.message || 'Internal Server Error';
-  const details =
-    err instanceof AppError && err.details ? err.details : undefined;
+  let statusCode: number;
+  let code: string;
+  let message: string;
+  let details: unknown;
+
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
+    code = err.errorCode || 'INTERNAL_SERVER_ERROR';
+    message = err.message || 'Internal Server Error';
+    details = err.details;
+  } else if (
+    err instanceof Error &&
+    err.message.startsWith('Origin not allowed:')
+  ) {
+    statusCode = 403;
+    code = 'FORBIDDEN_ORIGIN';
+    message = err.message;
+  } else {
+    statusCode = 500;
+    code = 'INTERNAL_SERVER_ERROR';
+    message = err.message || 'Internal Server Error';
+  }
 
   const errorBody: Record<string, unknown> = { code, message };
   if (details) errorBody.details = details;

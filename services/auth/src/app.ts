@@ -2,22 +2,47 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import routes from './routes';
-import { errorHandler, notFoundHandler } from './middleware';
+import { errorHandler, notFoundHandler, verifyInterService } from './middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { prisma } from './repositories/prisma.client';
 import { createHealthChecks } from './utils/health';
+import { config } from './config';
 
 export const createApp = (): Express => {
   const app = express();
 
   app.set('trust proxy', 1);
   app.use(helmet());
+  // CORS — allow the frontend origin (FRONTEND_URL) plus comma-separated
+  // extras if set. The auth service should normally be reached via the
+  // gateway, but when the gateway is bypassed (dev tooling, e2e tests), this
+  // keeps the browser happy.
   app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // same-origin / server-to-server
+      const allowed = config.app.frontendUrl
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
+      if (allowed.includes(origin) || allowed.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin not allowed: ${origin}`), false);
+    },
     credentials: true,
   }));
-  app.use(express.json());
+  // Capture raw body bytes for inter-service HMAC verification. Mirrors
+  // the gateway's pattern. The verify callback runs before express.json
+  // parses, so we still get the bytes even for malformed JSON.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true }));
 
   // /live = process-up only (LB restart decisions).
@@ -34,7 +59,10 @@ export const createApp = (): Express => {
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  app.use('/api/v1/auth', routes);
+  // Gate every /api/v1/auth/* request on a valid inter-service HMAC.
+  // Public endpoints (login/register/refresh/forgot/reset) are allow-listed
+  // inside the middleware.
+  app.use('/api/v1/auth', verifyInterService, routes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

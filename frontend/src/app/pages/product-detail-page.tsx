@@ -12,7 +12,18 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Product {
-  id: string; name: string; description: string; price: number; comparePrice?: number; images: string[]; category?: { name: string };
+  id: string;
+  name: string;
+  description: string;
+  /** Product basePrice is a stringified Decimal from the API. */
+  basePrice: string;
+  compareAtPrice?: string | null;
+  images: string[];
+  category?: { name: string };
+  /** 0..5 average rating, from the catalog `Product.averageRating` column. */
+  averageRating?: number;
+  /** Total number of approved reviews for this product. */
+  reviewCount?: number;
 }
 
 export function ProductDetailPage() {
@@ -67,7 +78,18 @@ export function ProductDetailPage() {
     </div>
   );
 
-  const discount = product.comparePrice ? Math.round((1 - product.price / product.comparePrice) * 100) : 0;
+  const price = Number(product.basePrice);
+  const comparePrice = product.compareAtPrice ? Number(product.compareAtPrice) : undefined;
+  const discount = comparePrice && comparePrice > 0
+    ? Math.round((1 - price / comparePrice) * 100)
+    : 0;
+
+  // Round to nearest half-star for the fill calculation, then split
+  // into full / empty stars for the icon row. Default to 0 (no stars)
+  // when the product is new or the API didn't return a rating.
+  const rating = typeof product.averageRating === 'number' ? product.averageRating : 0;
+  const filledStars = Math.round(rating);
+  const reviewCount = product.reviewCount ?? 0;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -118,15 +140,33 @@ export function ProductDetailPage() {
 
           <div className="flex items-center gap-1 mb-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              <Star
+                key={i}
+                className={
+                  i < filledStars
+                    ? 'h-4 w-4 fill-yellow-400 text-yellow-400'
+                    : 'h-4 w-4 text-muted-foreground/40'
+                }
+                aria-hidden
+              />
             ))}
-            <span className="text-sm text-muted-foreground ml-2">(12 reviews)</span>
+            {reviewCount > 0 ? (
+              <Link
+                to={`/products/${id}/reviews`}
+                className="text-sm text-muted-foreground ml-2 hover:text-foreground underline-offset-2 hover:underline"
+                aria-label={`${reviewCount} reviews, average rating ${rating.toFixed(1)} out of 5`}
+              >
+                ({reviewCount} review{reviewCount === 1 ? '' : 's'})
+              </Link>
+            ) : (
+              <span className="text-sm text-muted-foreground ml-2">No reviews yet</span>
+            )}
           </div>
 
           <div className="flex items-baseline gap-3 mb-6">
-            <span className="text-3xl font-bold text-primary">${product.price}</span>
-            {product.comparePrice && (
-              <span className="text-xl text-muted-foreground line-through">${product.comparePrice}</span>
+            <span className="text-3xl font-bold text-primary">${price.toFixed(2)}</span>
+            {comparePrice && comparePrice > 0 && (
+              <span className="text-xl text-muted-foreground line-through">${comparePrice.toFixed(2)}</span>
             )}
           </div>
 

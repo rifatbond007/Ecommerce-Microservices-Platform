@@ -11,6 +11,9 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   verbose: true,
+  moduleNameMapper: {
+    '^@prisma/payment$': '<rootDir>/node_modules/.prisma/payment',
+  },
   transform: {
     '^.+\\.ts$': ['ts-jest', {}],
   },

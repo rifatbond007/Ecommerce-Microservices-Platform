@@ -3,11 +3,20 @@ import httpProxy from 'http-proxy';
 import { config } from '../../config';
 import { logger } from '../../utils/logger';
 import { ServiceUnavailableError } from '../../utils/errors';
+import { signRequest } from '../../utils/sign';
 
 const proxy = httpProxy.createProxyServer({
   changeOrigin: true,
   timeout: 30000,
   proxyTimeout: 30000,
+  // We always read the body in app.ts via `express.json({ verify })` so we can
+  // forward it manually via the `proxyReq` listener below. Disable the default
+  // auto-pipe of the original request stream, otherwise http-proxy races with
+  // our manual write and POST bodies (e.g. /api/v1/auth/register) get truncated
+  // or duplicated, causing downstream services to reject them.
+  // `forwardStream` is supported by http-proxy 1.18.x at runtime but missing
+  // from @types/http-proxy 1.17.x, hence the cast.
+  ...({ forwardStream: false } as Record<string, unknown>),
 });
 
 proxy.on('error', (err, req, res) => {
@@ -29,10 +38,32 @@ proxy.on('econnreset', (err, req, res) => {
 });
 
 proxy.on('proxyReq', (proxyReq, req: any) => {
+  // Inter-service HMAC signing. Downstream services verify the signature
+  // before honouring x-user-id/x-user-email/x-user-role headers. Both sides
+  // MUST use req.originalUrl as the path string (includes query string).
+  // Webhooks are exempt: payment service allow-lists /api/v1/webhooks/* in
+  // services/payment/src/utils/verify.ts.
+  //
+  // Headers MUST be set before proxyReq.write()/proxyReq.end() flushes the
+  // outgoing request — once the headers are on the wire, setHeader() throws
+  // "Cannot set headers after they are sent to the client", which under the
+  // uncaughtException handler in src/index.ts kills the gateway.
+  const { signature, timestamp, keyId } = signRequest({
+    method: req.method,
+    path: req.originalUrl,
+    body: req.rawBody ?? '',
+  });
+  proxyReq.setHeader('x-inter-service-signature', signature);
+  proxyReq.setHeader('x-inter-service-timestamp', timestamp);
+  proxyReq.setHeader('x-inter-service-key-id', keyId);
+
   if (req.rawBody) {
     proxyReq.setHeader('Content-Length', Buffer.byteLength(req.rawBody));
     proxyReq.write(req.rawBody);
   }
+
+  // With forwardStream:false, http-proxy won't end the upstream request for us.
+  proxyReq.end();
 });
 
 proxy.on('proxyRes', (proxyRes) => {
@@ -56,24 +87,34 @@ export interface ServiceRoute {
   authRequired: boolean;
 }
 
+// Routes the gateway forwards to upstream services. All 9 downstream services
+// are wired in; user-service owns /users and /sellers, and the remaining
+// prefixes map to notification/search/admin/product/cart as listed below.
 export const defaultRoutes: ServiceRoute[] = [
   { path: '/api/v1/auth', method: 'ALL', targetService: 'auth', authRequired: false },
-  { path: '/api/v1/users', method: 'ALL', targetService: 'user', authRequired: true },
   { path: '/api/v1/products', method: 'ALL', targetService: 'product', authRequired: false },
   { path: '/api/v1/categories', method: 'ALL', targetService: 'product', authRequired: false },
-  { path: '/api/v1/brands', method: 'ALL', targetService: 'product', authRequired: false },
-  { path: '/api/v1/variants', method: 'ALL', targetService: 'product', authRequired: false },
-  { path: '/api/v1/inventory', method: 'ALL', targetService: 'product', authRequired: false },
   { path: '/api/v1/carts', method: 'ALL', targetService: 'cart', authRequired: true },
   { path: '/api/v1/orders', method: 'ALL', targetService: 'order', authRequired: true },
   { path: '/api/v1/payments', method: 'ALL', targetService: 'payment', authRequired: true },
-  { path: '/api/v1/notifications', method: 'ALL', targetService: 'notification', authRequired: true },
-  { path: '/api/v1/search', method: 'ALL', targetService: 'search', authRequired: false },
-  { path: '/api/v1/saved-carts', method: 'ALL', targetService: 'cart', authRequired: true },
-  { path: '/api/v1/admin', method: 'ALL', targetService: 'admin', authRequired: true },
-  { path: '/api/v1/sellers', method: 'ALL', targetService: 'user', authRequired: true },
-  // Webhooks bypass auth + rate limit; signature is verified by the upstream service.
+  // Webhooks bypass auth; signature verified upstream.
   { path: '/api/v1/webhooks', method: 'ALL', targetService: 'payment', authRequired: false },
+  // Users (profiles, addresses, wishlists, reviews) — auth required.
+  { path: '/api/v1/users', method: 'ALL', targetService: 'user', authRequired: true },
+  // Sellers — user-service is the entry point (passthrough to auth).
+  { path: '/api/v1/sellers', method: 'ALL', targetService: 'user', authRequired: true },
+  // Saved carts live alongside /carts in the cart service.
+  { path: '/api/v1/saved-carts', method: 'ALL', targetService: 'cart', authRequired: true },
+  // Catalog reads are public; writes are gated inside the product service.
+  { path: '/api/v1/brands', method: 'ALL', targetService: 'product', authRequired: false },
+  { path: '/api/v1/variants', method: 'ALL', targetService: 'product', authRequired: false },
+  { path: '/api/v1/inventory', method: 'ALL', targetService: 'product', authRequired: false },
+  // User-scoped notifications — auth required.
+  { path: '/api/v1/notifications', method: 'ALL', targetService: 'notification', authRequired: true },
+  // Search reads are public; only /search/click needs auth (gated inside the service).
+  { path: '/api/v1/search', method: 'ALL', targetService: 'search', authRequired: false },
+  // Admin — role enforcement (requireAdmin) happens inside the admin service.
+  { path: '/api/v1/admin', method: 'ALL', targetService: 'admin', authRequired: true },
 ];
 
 export const getTargetUrl = (serviceName: keyof typeof config.services): string => {
