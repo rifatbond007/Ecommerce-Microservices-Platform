@@ -36,6 +36,9 @@ import { AdminDashboardPage } from './pages/admin/admin-dashboard-page';
 import { AdminUsersPage } from './pages/admin/admin-users-page';
 import { AdminProductsPage } from './pages/admin/admin-products-page';
 import { AdminOrdersPage } from './pages/admin/admin-orders-page';
+import { AdminSettingsPage } from './pages/admin/admin-settings-page';
+import { DashboardPage } from './pages/user/dashboard-page';
+import { MyReviewsPage } from './pages/user/my-reviews-page';
 import { NotFoundPage } from './pages/not-found-page';
 
 const pageVariants = {
@@ -102,6 +105,8 @@ export default function App() {
             <PageWrap key={location.pathname}>
               <Routes location={location}>
               <Route path="/" element={<HomePage />} />
+              <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+              <Route path="/my-reviews" element={<ProtectedRoute><MyReviewsPage /></ProtectedRoute>} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -129,6 +134,7 @@ export default function App() {
               <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
               <Route path="/admin/products" element={<AdminRoute><AdminProductsPage /></AdminRoute>} />
               <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
+              <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
               <Route path="/about" element={<StaticPage slug="about" />} />
               <Route path="/careers" element={<StaticPage slug="careers" />} />
               <Route path="/contact" element={<StaticPage slug="contact" />} />

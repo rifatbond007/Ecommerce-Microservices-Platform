@@ -14,8 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary — deep indigo for trustworthy commerce */
-    --primary: 222 47% 18%;
+    /* Primary — pure black for crisp commerce */
+    --primary: 0 0% 0%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96%;
@@ -39,7 +39,7 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 222 47% 18%;
+    --ring: 0 0% 0%;
 
     --radius: 0.625rem;
   }
@@ -54,8 +54,8 @@
     --popover: 222 47% 12%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
 
     --secondary: 217 32% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -77,7 +77,7 @@
 
     --border: 217 32% 22%;
     --input: 217 32% 22%;
-    --ring: 212 27% 84%;
+    --ring: 0 0% 100%;
   }
 }
 

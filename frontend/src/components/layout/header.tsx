@@ -1,29 +1,73 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, Search, LogOut, Bell, Store, LayoutDashboard } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import {
+  ShoppingCart,
+  User,
+  Menu,
+  Search,
+  LogOut,
+  Bell,
+  Store,
+  LayoutDashboard,
+  Heart,
+  MapPin,
+  Settings,
+  Package,
+} from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
-import { api } from '@/lib/api';
+import { notificationApi } from '@/lib/api';
 
 export function Header() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuthStore();
   const { items } = useCartStore();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    api.get('/notifications').then(r => {
-      const notifs = r.data.notifications || [];
-      setUnreadNotifications(notifs.filter((n: any) => !n.readAt).length);
-    }).catch(() => {});
+    if (!isAuthenticated) {
+      setUnreadNotifications(0);
+      return;
+    }
+    notificationApi
+      .list({ limit: 50 })
+      .then((res: unknown) => {
+        const data = res as { notifications?: Array<{ readAt?: string | null }> };
+        const notifs = data.notifications || [];
+        setUnreadNotifications(notifs.filter((n) => !n.readAt).length);
+      })
+      .catch(() => {});
   }, [isAuthenticated]);
 
   const handleLogout = async () => {
@@ -32,152 +76,137 @@ export function Header() {
   };
 
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const userInitial = user?.email?.charAt(0).toUpperCase() || 'U';
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchOpen(false);
-      setSearchQuery('');
-    }
-  };
+  const homePath = isAuthenticated ? '/dashboard' : '/';
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#e5e5e5] bg-white">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <Link to="/" className="text-xl font-bold tracking-widest text-[#111111] uppercase">
+        <Link
+          to={homePath}
+          className="text-xl font-bold tracking-widest text-foreground uppercase"
+        >
           Market
         </Link>
 
         <div className="flex items-center gap-2">
-          {/* Mobile-only icons (search + cart), so they're reachable below `md`.
-              Hidden on md+ where the full nav takes over. */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            aria-label="Open search"
-            onClick={() => setSearchOpen(true)}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative md:hidden"
-            aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
-            onClick={() => navigate('/cart')}
-          >
-            <ShoppingCart className="h-4 w-4" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#111111] text-white text-[9px] font-bold flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-          </Button>
-
           <nav className="hidden md:flex items-center gap-6">
-            {['Products', 'Categories'].map((item) => (
+            {[
+              { label: 'Products', path: '/products' },
+              { label: 'Categories', path: '/categories' },
+            ].map((item) => (
               <Link
-                key={item}
-                to={`/${item.toLowerCase()}`}
-                className="text-xs font-bold uppercase tracking-widest text-[#666666] hover:text-[#111111] transition-colors"
+                key={item.label}
+                to={item.path}
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
               >
-                {item}
+                {item.label}
               </Link>
             ))}
-            <Button variant="ghost" size="icon" aria-label="Open search" onClick={() => setSearchOpen(true)}>
-              <Search className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="relative" aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`} onClick={() => navigate('/cart')}>
+            <SearchCommand onNavigate={(p) => navigate(p)} />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+              onClick={() => navigate('/cart')}
+            >
               <ShoppingCart className="h-4 w-4" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#111111] text-white text-[9px] font-bold flex items-center justify-center">
-                  {cartCount}
+                <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center rounded-full">
+                  {cartCount > 99 ? '99+' : cartCount}
                 </span>
               )}
             </Button>
             {isAuthenticated && (
-              <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications, ${unreadNotifications} unread`} onClick={() => navigate('/notifications')}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                aria-label={`Notifications, ${unreadNotifications} unread`}
+                onClick={() => navigate('/notifications')}
+              >
                 <Bell className="h-4 w-4" />
                 {unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#111111] text-white text-[9px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center rounded-full">
                     {unreadNotifications > 9 ? '9+' : unreadNotifications}
                   </span>
                 )}
               </Button>
             )}
             {isAuthenticated ? (
-              <div className="relative">
-                <Button variant="ghost" size="icon" aria-label="Account menu" onClick={() => setUserMenuOpen(!userMenuOpen)}>
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback className="bg-[#111111] text-white text-[10px] font-bold">
-                      {user?.email?.charAt(0).toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-                {userMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-56 border border-[#e5e5e5] bg-white z-20">
-                      <div className="p-3 border-b border-[#e5e5e5]">
-                        <p className="text-sm font-bold text-[#111111] truncate">{user?.email}</p>
-                        <p className="text-xs text-[#666666] uppercase tracking-wider mt-0.5">
-                          {user?.role?.replace('_', ' ')}
-                          {user?.sellerStatus === 'APPROVED' ? ' · SELLER' : ''}
-                        </p>
-                      </div>
-                      <div className="p-1">
-                        {[
-                          { label: 'Profile', path: '/profile', icon: User },
-                          { label: 'Orders', path: '/orders', icon: ShoppingCart },
-                        ].map(({ label, path, icon: Icon }) => (
-                          <button
-                            key={label}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                            onClick={() => { navigate(path); setUserMenuOpen(false); }}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            {label}
-                          </button>
-                        ))}
-                        {user?.sellerStatus === 'APPROVED' && (
-                          <button
-                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                            onClick={() => { navigate('/seller'); setUserMenuOpen(false); }}
-                          >
-                            <Store className="h-3.5 w-3.5" /> Seller Dashboard
-                          </button>
-                        )}
-                        {(!user?.sellerStatus || user?.sellerStatus === 'NONE') && (
-                          <button
-                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                            onClick={() => { navigate('/become-seller'); setUserMenuOpen(false); }}
-                          >
-                            <Store className="h-3.5 w-3.5" /> Become a Seller
-                          </button>
-                        )}
-                        {user?.role === 'admin' && (
-                          <button
-                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                            onClick={() => { navigate('/admin'); setUserMenuOpen(false); }}
-                          >
-                            <LayoutDashboard className="h-3.5 w-3.5" /> Admin Dashboard
-                          </button>
-                        )}
-                      </div>
-                      <div className="border-t border-[#e5e5e5] p-1">
-                        <button
-                          className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                          onClick={() => { handleLogout(); setUserMenuOpen(false); }}
-                        >
-                          <LogOut className="h-3.5 w-3.5" /> Logout
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Account menu"
+                  >
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-bold">
+                        {userInitial}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <p className="text-sm font-bold truncate">{user?.email}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">
+                      {user?.role?.replace('_', ' ')}
+                      {user?.sellerStatus === 'APPROVED' ? ' · SELLER' : ''}
+                    </p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    <LayoutDashboard className="mr-2 h-3.5 w-3.5" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <User className="mr-2 h-3.5 w-3.5" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/orders')}>
+                    <Package className="mr-2 h-3.5 w-3.5" />
+                    Orders
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/wishlists')}>
+                    <Heart className="mr-2 h-3.5 w-3.5" />
+                    Wishlists
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/addresses')}>
+                    <MapPin className="mr-2 h-3.5 w-3.5" />
+                    Addresses
+                  </DropdownMenuItem>
+                  {user?.sellerStatus === 'APPROVED' ? (
+                    <DropdownMenuItem onClick={() => navigate('/seller')}>
+                      <Store className="mr-2 h-3.5 w-3.5" />
+                      Seller Dashboard
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onClick={() => navigate('/become-seller')}>
+                      <Store className="mr-2 h-3.5 w-3.5" />
+                      Become a Seller
+                    </DropdownMenuItem>
+                  )}
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem onClick={() => navigate('/admin')}>
+                      <LayoutDashboard className="mr-2 h-3.5 w-3.5" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <Settings className="mr-2 h-3.5 w-3.5" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-3.5 w-3.5" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <Button size="sm" onClick={() => navigate('/login')}>
                 Sign In
@@ -185,84 +214,194 @@ export function Header() {
             )}
           </nav>
 
-          {/* Hamburger — outside the nav so it shows on mobile. md:hidden. */}
-          <button
-            className="md:hidden p-2 text-[#111111]"
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileMenuOpen}
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {/* Mobile */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72">
+              <SheetHeader>
+                <SheetTitle>
+                  <Link
+                    to={homePath}
+                    className="text-xl font-bold tracking-widest text-foreground uppercase"
+                  >
+                    Market
+                  </Link>
+                </SheetTitle>
+              </SheetHeader>
+              <nav className="mt-6 flex flex-col gap-1">
+                <SearchCommand
+                  onNavigate={(p) => navigate(p)}
+                  variant="mobile"
+                />
+                {[
+                  { label: 'Products', path: '/products' },
+                  { label: 'Categories', path: '/categories' },
+                  { label: 'Cart', path: '/cart' },
+                ].map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.path}
+                    className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                <Separator className="my-2" />
+                {isAuthenticated ? (
+                  <>
+                    <Link
+                      to="/dashboard"
+                      className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/orders"
+                      className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      Orders
+                    </Link>
+                    <Link
+                      to="/profile"
+                      className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      Profile
+                    </Link>
+                    {user?.sellerStatus === 'APPROVED' && (
+                      <Link
+                        to="/seller"
+                        className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        Seller Dashboard
+                      </Link>
+                    )}
+                    {(!user?.sellerStatus || user?.sellerStatus === 'NONE') && (
+                      <Link
+                        to="/become-seller"
+                        className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        Become a Seller
+                      </Link>
+                    )}
+                    {user?.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      >
+                        Admin Dashboard
+                      </Link>
+                    )}
+                    <button
+                      className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted text-left transition-colors"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                )}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
-
-      {mobileMenuOpen && (
-        <div className="border-t border-[#e5e5e5] md:hidden">
-          <nav className="mx-auto max-w-7xl flex flex-col px-4 py-4 gap-1">
-            {['Products', 'Categories', 'Search'].map((item) => (
-              <Link
-                key={item}
-                to={`/${item.toLowerCase()}`}
-                className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {item}
-              </Link>
-            ))}
-            <Separator className="my-2 bg-[#e5e5e5]" />
-            {isAuthenticated ? (
-              <>
-                <Link to="/cart" className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors" onClick={() => setMobileMenuOpen(false)}>Cart ({cartCount})</Link>
-                <Link to="/orders" className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors" onClick={() => setMobileMenuOpen(false)}>Orders</Link>
-                <Link to="/profile" className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors" onClick={() => setMobileMenuOpen(false)}>Profile</Link>
-                {user?.sellerStatus === 'APPROVED' && (
-                  <Link to="/seller" className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors" onClick={() => setMobileMenuOpen(false)}>Seller Dashboard</Link>
-                )}
-                {(!user?.sellerStatus || user?.sellerStatus === 'NONE') && (
-                  <Link to="/become-seller" className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors" onClick={() => setMobileMenuOpen(false)}>Become a Seller</Link>
-                )}
-                {user?.role === 'admin' && (
-                  <Link to="/admin" className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors" onClick={() => setMobileMenuOpen(false)}>Admin Dashboard</Link>
-                )}
-                <button className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] text-left transition-colors" onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <Link to="/login" className="px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] hover:bg-[#f5f5f5] transition-colors" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
-            )}
-          </nav>
-        </div>
-      )}
-
-      {searchOpen && (
-        <div className="fixed inset-0 z-50 bg-white/95">
-          <div className="mx-auto max-w-2xl px-4 pt-24">
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666666]" />
-              <input
-                autoFocus
-                type="text"
-                placeholder="SEARCH PRODUCTS..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-12 pl-11 pr-12 border border-[#e5e5e5] bg-white text-sm text-[#111111] font-bold uppercase tracking-wider outline-none focus:border-[#111111] transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => setSearchOpen(false)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666666] hover:text-[#111111] transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </form>
-            <p className="text-center text-xs text-[#666666] mt-3 uppercase tracking-wider">
-              Press Esc to close
-            </p>
-          </div>
-        </div>
-      )}
     </header>
+  );
+}
+
+interface SearchCommandProps {
+  onNavigate: (path: string) => void;
+  variant?: 'desktop' | 'mobile';
+}
+
+function SearchCommand({ onNavigate, variant = 'desktop' }: SearchCommandProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (variant === 'desktop') {
+      const down = (e: KeyboardEvent) => {
+        if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          setOpen((o) => !o);
+        }
+      };
+      document.addEventListener('keydown', down);
+      return () => document.removeEventListener('keydown', down);
+    }
+  }, [variant]);
+
+  const submit = useCallback(() => {
+    if (query.trim()) {
+      onNavigate(`/search?q=${encodeURIComponent(query.trim())}`);
+      setOpen(false);
+      setQuery('');
+    }
+  }, [query, onNavigate]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Open search"
+        onClick={() => setOpen(true)}
+        className={variant === 'mobile' ? 'w-full justify-start px-3' : ''}
+      >
+        <Search className="h-4 w-4" />
+        {variant === 'mobile' && (
+          <span className="ml-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Search
+          </span>
+        )}
+      </Button>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden">
+        <DialogTitle className="sr-only">Search</DialogTitle>
+        <Command>
+          <CommandInput
+            placeholder="SEARCH PRODUCTS..."
+            value={query}
+            onValueChange={setQuery}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === 'Enter') submit();
+            }}
+          />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Suggestions">
+              <CommandItem onSelect={() => onNavigate('/products')}>
+                <Search className="mr-2 h-4 w-4" />
+                Browse all products
+              </CommandItem>
+              <CommandItem onSelect={() => onNavigate('/categories')}>
+                <Search className="mr-2 h-4 w-4" />
+                Browse categories
+              </CommandItem>
+              {query.trim() && (
+                <CommandItem onSelect={submit}>
+                  <Search className="mr-2 h-4 w-4" />
+                  Search for "{query}"
+                </CommandItem>
+              )}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </DialogContent>
+    </Dialog>
   );
 }

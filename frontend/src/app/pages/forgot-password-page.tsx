@@ -33,23 +33,23 @@ export function ForgotPasswordPage() {
   if (sent) {
     return (
       <div className="mx-auto max-w-5xl px-6 py-12">
-        <div className="mx-auto max-w-md border border-[#e5e5e5] bg-white">
-          <div className="px-8 py-12 border-b border-[#e5e5e5]">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+        <div className="mx-auto max-w-md border border-border bg-background">
+          <div className="px-8 py-12 border-b border-border">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Email Sent
             </p>
-            <h1 className="mt-3 text-2xl md:text-3xl font-bold text-[#111111]">
+            <h1 className="mt-3 text-2xl md:text-3xl font-bold text-foreground">
               Check Your Email
             </h1>
-            <p className="mt-2 text-sm text-[#666666]">
+            <p className="mt-2 text-sm text-muted-foreground">
               A reset link has been sent to {email}.
             </p>
           </div>
           <div className="px-8 py-8 text-center space-y-4">
-            <div className="h-16 w-16 border border-[#e5e5e5] bg-[#fafafa] flex items-center justify-center mx-auto">
-              <Mail className="h-8 w-8 text-[#111111]" />
+            <div className="h-16 w-16 border border-border bg-muted flex items-center justify-center mx-auto">
+              <Mail className="h-8 w-8 text-foreground" />
             </div>
-            <p className="text-sm text-[#666666]">
+            <p className="text-sm text-muted-foreground">
               It may take a few minutes to arrive. Be sure to check your spam folder.
             </p>
             <div className="pt-4">
@@ -60,8 +60,8 @@ export function ForgotPasswordPage() {
               </Link>
             </div>
           </div>
-          <div className="px-8 py-4 bg-[#fafafa] border-t border-[#e5e5e5] text-center">
-            <p className="text-xs text-[#777777] uppercase tracking-wider">Market — Premium Products</p>
+          <div className="px-8 py-4 bg-muted border-t border-border text-center">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Market — Premium Products</p>
           </div>
         </div>
       </div>
@@ -70,15 +70,15 @@ export function ForgotPasswordPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
-      <div className="mx-auto max-w-md border border-[#e5e5e5] bg-white">
-        <div className="px-8 py-12 border-b border-[#e5e5e5]">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+      <div className="mx-auto max-w-md border border-border bg-background">
+        <div className="px-8 py-12 border-b border-border">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
             Password Reset
           </p>
-          <h1 className="mt-3 text-2xl md:text-3xl font-bold text-[#111111]">
+          <h1 className="mt-3 text-2xl md:text-3xl font-bold text-foreground">
             Forgot Password?
           </h1>
-          <p className="mt-2 text-sm text-[#666666]">
+          <p className="mt-2 text-sm text-muted-foreground">
             No worries. Enter your email and we'll send you reset instructions.
           </p>
         </div>
@@ -86,12 +86,12 @@ export function ForgotPasswordPage() {
         <form onSubmit={handleSubmit}>
           <div className="px-8 py-8 space-y-5">
             {error && (
-              <div className="text-sm text-[#111111] p-3 border border-[#e5e5e5] bg-[#fafafa]">
+              <div className="text-sm text-foreground p-3 border border-border bg-muted">
                 {error}
               </div>
             )}
             <div>
-              <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-[#111111] mb-2">
+              <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-foreground mb-2">
                 Email Address
               </label>
               <Input
@@ -109,17 +109,17 @@ export function ForgotPasswordPage() {
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? 'Sending...' : 'Send Reset Link'}
             </Button>
-            <p className="text-xs text-center text-[#666666] uppercase tracking-wider">
+            <p className="text-xs text-center text-muted-foreground uppercase tracking-wider">
               Remember your password?{' '}
-              <Link to="/login" className="text-[#111111] font-bold hover:underline">
+              <Link to="/login" className="text-foreground font-bold hover:underline">
                 Sign In
               </Link>
             </p>
           </div>
         </form>
 
-        <div className="px-8 py-4 bg-[#fafafa] border-t border-[#e5e5e5] text-center">
-          <p className="text-xs text-[#777777] uppercase tracking-wider">Market — Premium Products</p>
+        <div className="px-8 py-4 bg-muted border-t border-border text-center">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Market — Premium Products</p>
         </div>
       </div>
     </div>

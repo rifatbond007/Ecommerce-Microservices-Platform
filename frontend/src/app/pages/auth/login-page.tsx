@@ -26,15 +26,15 @@ export function LoginPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
-      <div className="mx-auto max-w-md border border-[#e5e5e5] bg-white">
-        <div className="px-8 py-12 border-b border-[#e5e5e5]">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+      <div className="mx-auto max-w-md border border-border bg-background">
+        <div className="px-8 py-12 border-b border-border">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
             Account
           </p>
-          <h1 className="mt-3 text-2xl md:text-3xl font-bold text-[#111111]">
+          <h1 className="mt-3 text-2xl md:text-3xl font-bold text-foreground">
             Sign In
           </h1>
-          <p className="mt-2 text-sm text-[#666666]">
+          <p className="mt-2 text-sm text-muted-foreground">
             Welcome back. Sign in to your account to continue.
           </p>
         </div>
@@ -42,12 +42,12 @@ export function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="px-8 py-8 space-y-5">
             {error && (
-              <div className="text-sm text-[#111111] p-3 border border-[#e5e5e5] bg-[#fafafa]">
+              <div className="text-sm text-foreground p-3 border border-border bg-muted">
                 {error}
               </div>
             )}
             <div>
-              <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-[#111111] mb-2">
+              <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-foreground mb-2">
                 Email
               </label>
               <Input
@@ -60,7 +60,7 @@ export function LoginPage() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-[#111111] mb-2">
+              <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-foreground mb-2">
                 Password
               </label>
               <div className="relative">
@@ -76,14 +76,14 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666666] hover:text-[#111111] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-xs font-bold uppercase tracking-wider text-[#666666] hover:text-[#111111] transition-colors">
+              <Link to="/forgot-password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
                 Forgot Password?
               </Link>
             </div>
@@ -93,17 +93,17 @@ export function LoginPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
-            <p className="text-xs text-center text-[#666666] uppercase tracking-wider">
+            <p className="text-xs text-center text-muted-foreground uppercase tracking-wider">
               Don't have an account?{' '}
-              <Link to="/register" className="text-[#111111] font-bold hover:underline">
+              <Link to="/register" className="text-foreground font-bold hover:underline">
                 Create One
               </Link>
             </p>
           </div>
         </form>
 
-        <div className="px-8 py-4 bg-[#fafafa] border-t border-[#e5e5e5] text-center">
-          <p className="text-xs text-[#777777] uppercase tracking-wider">
+        <div className="px-8 py-4 bg-muted border-t border-border text-center">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">
             Market — Premium Products
           </p>
         </div>

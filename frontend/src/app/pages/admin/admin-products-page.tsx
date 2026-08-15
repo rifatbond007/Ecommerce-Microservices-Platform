@@ -1,12 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { adminApi } from '@/lib/api';
+import { adminApi, getErrorMessage } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Trash2, Power, Star, Package } from 'lucide-react';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Pagination } from '@/components/pagination';
+import { Search, Trash2, Power, Star, Package, RefreshCw } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -19,49 +27,42 @@ interface Product {
   createdAt: string;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 },
-  },
-};
-
-const rowVariants = {
-  hidden: { x: -10, opacity: 0 },
-  visible: {
-    x: 0,
-    opacity: 1,
-    transition: { type: 'spring' as const, stiffness: 260, damping: 22 },
-  },
-};
-
 export function AdminProductsPage() {
+  const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<Product | null>(null);
+  const limit = 20;
 
-  const fetchProducts = useCallback(async (q?: string) => {
-    setLoading(true);
-    setError('');
-    try {
-      const params = q ? { search: q } : undefined;
-      const res = await adminApi.getProducts(params);
-      setProducts(res.data.products || []);
-    } catch {
-      setError('Failed to load products');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchProducts = useCallback(
+    async (q?: string, p = 1) => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await adminApi.getProducts({ search: q, page: p, limit });
+        const data = (res.data ?? {}) as { products?: Product[]; total?: number };
+        setProducts(data.products ?? []);
+        setTotal(data.total ?? (data.products?.length ?? 0));
+      } catch (err) {
+        setError(getErrorMessage(err, 'Failed to load products'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [limit]
+  );
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    fetchProducts(undefined, page);
+  }, [fetchProducts, page]);
 
   const handleSearch = () => {
-    fetchProducts(search);
+    setPage(1);
+    fetchProducts(search, 1);
   };
 
   const handleToggleActive = async (id: string, current: boolean) => {
@@ -70,8 +71,13 @@ export function AdminProductsPage() {
       setProducts((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isActive: !current } : p))
       );
-    } catch {
-      // silent
+      toast({ title: `Product ${!current ? 'activated' : 'deactivated'}`, variant: 'success' as const });
+    } catch (err) {
+      toast({
+        title: 'Toggle failed',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      });
     }
   };
 
@@ -81,24 +87,36 @@ export function AdminProductsPage() {
       setProducts((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isFeatured: !current } : p))
       );
-    } catch {
-      // silent
+      toast({ title: `Product ${!current ? 'featured' : 'unfeatured'}`, variant: 'success' as const });
+    } catch (err) {
+      toast({
+        title: 'Toggle failed',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      });
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const id = pendingDelete.id;
+    setPendingDelete(null);
     try {
       await adminApi.deleteProduct(id);
       setProducts((prev) => prev.filter((p) => p.id !== id));
-    } catch {
-      // silent
+      toast({ title: 'Product deleted', variant: 'success' as const });
+    } catch (err) {
+      toast({
+        title: 'Delete failed',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      });
     }
   };
 
-  if (loading) {
+  if (loading && products.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-12">
         <Skeleton className="h-9 w-56 mb-6" />
         <Card>
           <CardHeader>
@@ -122,154 +140,164 @@ export function AdminProductsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <p className="text-destructive mb-4">{error}</p>
-        <Button onClick={() => fetchProducts()} className="rounded-full">Retry</Button>
-      </div>
-    );
-  }
-
   return (
-    <motion.div
-      className="container mx-auto px-4 py-8"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      <motion.div variants={rowVariants} className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Product Management</h1>
-        <p className="text-muted-foreground mt-1">{products.length} product{products.length !== 1 ? 's' : ''} on the platform</p>
-      </motion.div>
+    <div className="mx-auto max-w-7xl px-4 py-12">
+      <div className="mb-8">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Product Management</h1>
+        <p className="text-muted-foreground mt-2">
+          {total} product{total !== 1 ? 's' : ''} on the platform
+        </p>
+      </div>
 
-      <motion.div variants={rowVariants}>
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-muted-foreground" />
-                All Products
-              </CardTitle>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Input
-                  placeholder="Search products..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-full sm:w-64"
-                />
-                <Button variant="outline" size="icon" onClick={handleSearch} className="rounded-full">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-muted-foreground" />
+              All Products
+            </CardTitle>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Input
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full sm:w-64"
+              />
+              <Button variant="outline" size="icon" onClick={handleSearch}>
+                <Search className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => fetchProducts(search, page)}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {products.length === 0 ? (
-              <div className="text-center py-12">
-                <Package className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No products found.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b text-left bg-muted/30">
-                      <th className="sticky top-0 px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Image</th>
-                      <th className="sticky top-0 px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Name</th>
-                      <th className="sticky top-0 px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Price</th>
-                      <th className="sticky top-0 px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Category</th>
-                      <th className="sticky top-0 px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Status</th>
-                      <th className="sticky top-0 px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Featured</th>
-                      <th className="sticky top-0 px-6 py-3 font-medium text-xs text-muted-foreground uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product) => (
-                      <motion.tr
-                        key={product.id}
-                        variants={rowVariants}
-                        className="border-b last:border-0 transition-colors hover:bg-muted/20"
-                      >
-                        <td className="px-6 py-4">
-                          {product.images && product.images[0] ? (
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="w-12 h-12 object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
-                              <Package className="h-5 w-5" />
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 font-medium text-sm">{product.name}</td>
-                        <td className="px-6 py-4 font-medium">${product.price.toFixed(2)}</td>
-                        <td className="px-6 py-4 text-muted-foreground text-sm">
-                          {product.category?.name ? (
-                            <Badge variant="secondary">{product.category.name}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground/60">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {product.isActive ? (
-                            <Badge variant="success">Active</Badge>
-                          ) : (
-                            <Badge variant="destructive">Inactive</Badge>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {product.isFeatured ? (
-                            <Badge variant="warning">
-                              <Star className="h-3 w-3 mr-1 fill-current" /> Featured
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground/60 text-xs">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleToggleActive(product.id, product.isActive)}
-                              title={product.isActive ? 'Deactivate' : 'Activate'}
-                              className="rounded-full"
-                            >
-                              <Power className={product.isActive ? 'h-4 w-4 text-green-600' : 'h-4 w-4 text-muted-foreground'} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleToggleFeatured(product.id, product.isFeatured)}
-                              title={product.isFeatured ? 'Unfeature' : 'Feature'}
-                              className="rounded-full"
-                            >
-                              <Star className={product.isFeatured ? 'h-4 w-4 text-amber-500' : 'h-4 w-4 text-muted-foreground'} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(product.id)}
-                              title="Delete"
-                              className="rounded-full text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {error ? (
+            <div className="p-8 text-center text-destructive">{error}</div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No products found.</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Image</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Featured</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        {product.images && product.images[0] ? (
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-muted-foreground">
+                            <Package className="h-5 w-5" />
                           </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </motion.div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell className="font-medium">${product.price.toFixed(2)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {product.category?.name ? (
+                          <Badge variant="secondary">{product.category.name}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground/60">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.isActive ? (
+                          <Badge variant="success">Active</Badge>
+                        ) : (
+                          <Badge variant="destructive">Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.isFeatured ? (
+                          <Badge variant="warning">
+                            <Star className="h-3 w-3 mr-1 fill-current" /> Featured
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground/60 text-xs">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleToggleActive(product.id, product.isActive)}
+                            title={product.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            <Power className={product.isActive ? 'h-4 w-4 text-success' : 'h-4 w-4 text-muted-foreground'} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleToggleFeatured(product.id, product.isFeatured)}
+                            title={product.isFeatured ? 'Unfeature' : 'Feature'}
+                          >
+                            <Star className={product.isFeatured ? 'h-4 w-4 text-warning' : 'h-4 w-4 text-muted-foreground'} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setPendingDelete(product)}
+                            title="Delete"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Pagination
+                page={page}
+                totalPages={Math.max(1, Math.ceil(total / limit))}
+                onPageChange={setPage}
+              />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete product?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete <strong>{pendingDelete?.name}</strong>.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

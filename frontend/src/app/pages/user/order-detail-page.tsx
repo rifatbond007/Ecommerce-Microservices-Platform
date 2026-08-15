@@ -138,8 +138,7 @@ export function OrderDetailPage() {
     setReturnSuccess('');
     try {
       await orderApi.requestReturn(id!, {
-        orderItemId: returnItemId,
-        quantity: returnQuantity,
+        items: [{ productId: returnItemId, quantity: returnQuantity }],
         reason: returnReason,
       });
       setReturnSuccess('Return request submitted successfully');
@@ -355,7 +354,7 @@ export function OrderDetailPage() {
             </Card>
           </motion.div>
 
-          {order.status === 'Delivered' && (
+          {order.status?.toLowerCase() === 'delivered' && (
             <motion.div variants={item}>
               <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
                 <DialogTrigger asChild>
