@@ -63,7 +63,9 @@ test_endpoint() {
   fi
 
   local http_code
-  http_code=$(curl "${args[@]}" -X "$method" "${BASE_URL}${path}" 2>/dev/null || echo "000")
+  local curl_out=""
+  curl_out=$(curl "${args[@]}" -X "$method" "${BASE_URL}${path}" 2>/dev/null) || true
+  http_code="${curl_out:-000}"
 
   local ok=false
   if [ -n "$expected_code" ]; then
@@ -130,7 +132,10 @@ setup_auth() {
 {"email": "${AUTH_EMAIL}", "password": "${AUTH_PASSWORD}"}
 EOF
 )
-    curl -s -X POST "${BASE_URL}/api/v1/auth/login" \
+    # Pre-touch so a curl connection failure (which doesn't create -o)
+    # can't crash the script under `set -e` on the next `< "$TEMP_FILE"`.
+    : > "$TEMP_FILE"
+    curl -s --max-time 10 -X POST "${BASE_URL}/api/v1/auth/login" \
       -H "Content-Type: application/json" \
       -d "$login_payload" > "$TEMP_FILE" 2>/dev/null || true
     TOKEN=$(extract_token < "$TEMP_FILE")
@@ -163,9 +168,16 @@ EOF
 )
 
   local code
-  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" -X POST "${BASE_URL}/api/v1/auth/register" \
+  # Pre-touch so a curl connection failure (which doesn't create -o)
+  # can't crash the script under `set -e` on the next `< "$TEMP_FILE"`.
+  # Capture curl's http_code in a separate var so we don't end up with
+  # double-printed codes ("000" from -w + "000" from || echo fallback).
+  : > "$TEMP_FILE"
+  local curl_out=""
+  curl_out=$(curl -s --max-time 10 -o "$TEMP_FILE" -w "%{http_code}" -X POST "${BASE_URL}/api/v1/auth/register" \
     -H "Content-Type: application/json" \
-    -d "$reg_payload" 2>/dev/null || echo "000")
+    -d "$reg_payload" 2>/dev/null) || true
+  code="${curl_out:-000}"
 
   TOKEN=$(extract_token < "$TEMP_FILE")
 
@@ -176,7 +188,8 @@ EOF
 {"email": "${AUTH_EMAIL}", "password": "${AUTH_PASSWORD}"}
 EOF
 )
-    curl -s -X POST "${BASE_URL}/api/v1/auth/login" \
+    : > "$TEMP_FILE"
+    curl -s --max-time 10 -X POST "${BASE_URL}/api/v1/auth/login" \
       -H "Content-Type: application/json" \
       -d "$login_payload" > "$TEMP_FILE" 2>/dev/null || true
     TOKEN=$(extract_token < "$TEMP_FILE")
@@ -313,6 +326,9 @@ test_auth() {
 EOF
 )
   test_endpoint "POST" "/api/v1/auth/register" "Register new user" "201" "" "$reg_payload"
+  # Ensure file exists before redirect — test_endpoint's curl may have
+  # failed before creating it (connection error → no -o file).
+  [ -f "$TEMP_FILE" ] || : > "$TEMP_FILE"
   TOKEN=$(extract_token < "$TEMP_FILE")
 
   test_endpoint "POST" "/api/v1/auth/logout" "Logout" "200" "$TOKEN" \
