@@ -34,11 +34,12 @@ jobs:
           cache: 'npm'
       - run: npm ci
 
-      # Each service imports Prisma types from a single shared
-      # node_modules/.prisma/client that gets overwritten by the last
-      # service to run `prisma generate`. Build services one at a time
-      # and regenerate the matching client immediately before each build
-      # so TypeScript sees the right schema models and Input types.
+      # Each service now generates its Prisma client into its own
+      # services/<svc>/node_modules/.prisma/<svc> directory (see the
+      # `output` block in each prisma/schema.prisma) so the previous
+      # "last writer wins" hoisting gotcha is gone. Build services in any
+      # order — each build step still regenerates its own client first as
+      # belt-and-braces in case the schema was edited since install.
       - name: Build (typecheck) all services
         run: |
           for svc in admin auth cart gateway notification order payment product search user; do
@@ -86,8 +87,17 @@ jobs:
         env:
           PGPASSWORD: postgres
 
+      # Each service's `npm run prisma:generate` writes to its own
+      # services/<svc>/node_modules/.prisma/<svc>, so we generate them
+      # individually in any order — no more workspace-wide hoisting
+      # issue. The matching `prisma db push` immediately below uses the
+      # freshly-generated client.
       - name: Generate Prisma clients
-        run: npm run prisma:generate --workspaces
+        run: |
+          for svc in admin auth cart gateway notification order payment product search user; do
+            echo "=== generate $svc ==="
+            (cd services/$svc && npm run prisma:generate) || exit 1
+          done
 
       - name: Push Prisma schemas
         run: |
@@ -164,7 +174,10 @@ jobs:
       - name: Init DB + Prisma
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d ecommerce -f infra/postgres/init-scripts/init-schemas.sql
-          npm run prisma:generate --workspaces
+          for svc in admin auth cart gateway notification order payment product search user; do
+            echo "=== generate $svc ==="
+            (cd services/$svc && npm run prisma:generate) || exit 1
+          done
           for pair in auth=auth gateway=gateway user=user_service product=product_service cart=cart_service order=order_schema payment=payment_service notification=notification_service search=search_service admin=admin_service; do
             name="${pair%%=*}"
             schema="${pair#*=}"
