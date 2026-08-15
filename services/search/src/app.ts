@@ -4,7 +4,11 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { config } from './config';
 import routes from './routes';
-import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import {
+  errorHandler,
+  notFoundHandler,
+  verifyInterService,
+} from './middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { prisma } from './repositories/prisma.client';
@@ -25,7 +29,15 @@ export const createApp = (): Application => {
     })
   );
 
-  app.use(express.json());
+  // Capture raw body bytes for inter-service HMAC verification.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true }));
 
   const limiter = rateLimit({
@@ -55,7 +67,8 @@ export const createApp = (): Application => {
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  app.use('/api/v1', routes);
+  // Gate every /api/v1/* request on a valid inter-service HMAC.
+  app.use('/api/v1', verifyInterService, routes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config';
-import { errorHandler, notFoundHandler } from './middleware';
+import { errorHandler, notFoundHandler, verifyInterService } from './middleware';
 import routes from './routes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
@@ -29,7 +29,15 @@ export const createApp = (): Express => {
   );
 
   app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
-  app.use(express.json({ limit: '1mb' }));
+  // Capture raw body bytes for inter-service HMAC verification.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true }));
 
   // /live = process-up only (LB restart decisions).
@@ -46,7 +54,8 @@ export const createApp = (): Express => {
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  app.use('/api/v1', routes);
+  // Gate every /api/v1/* request on a valid inter-service HMAC.
+  app.use('/api/v1', verifyInterService, routes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

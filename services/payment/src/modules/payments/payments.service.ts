@@ -5,6 +5,7 @@ import { paymentRepository, refundRepository } from '../../repositories';
 import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
 import { publishEvent } from '../../utils/rabbitmq';
+import { buildSignedHeaders } from '../../utils/sign';
 import type { ProcessPaymentInput, RefundInput, PaymentResponse, RefundResponse } from './payments.types';
 
 function toPaymentResponse(payment: any): PaymentResponse {
@@ -78,8 +79,17 @@ export class PaymentsService {
     }
 
     try {
-      const orderResponse = await axios.get(`${config.orderService.url}/api/v1/orders/${input.orderId}`, {
-        headers: { 'x-user-id': userId, 'x-user-role': 'user' },
+      const orderPath = `/api/v1/orders/${input.orderId}`;
+      const orderResponse = await axios.get(`${config.orderService.url}${orderPath}`, {
+        headers: {
+          ...buildSignedHeaders({
+            method: 'GET',
+            path: orderPath,
+            body: '',
+          }),
+          'x-user-id': userId,
+          'x-user-role': 'user',
+        },
       });
       const order = orderResponse.data.data;
 
