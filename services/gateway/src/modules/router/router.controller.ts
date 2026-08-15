@@ -3,6 +3,7 @@ import httpProxy from 'http-proxy';
 import { config } from '../../config';
 import { logger } from '../../utils/logger';
 import { ServiceUnavailableError } from '../../utils/errors';
+import { signRequest } from '../../utils/sign';
 
 const proxy = httpProxy.createProxyServer({
   changeOrigin: true,
@@ -41,6 +42,21 @@ proxy.on('proxyReq', (proxyReq, req: any) => {
     proxyReq.setHeader('Content-Length', Buffer.byteLength(req.rawBody));
     proxyReq.write(req.rawBody);
   }
+
+  // Inter-service HMAC signing. Downstream services verify the signature
+  // before honouring x-user-id/x-user-email/x-user-role headers. Both sides
+  // MUST use req.originalUrl as the path string (includes query string).
+  // Webhooks are exempt: payment service allow-lists /api/v1/webhooks/* in
+  // services/payment/src/utils/verify.ts.
+  const { signature, timestamp, keyId } = signRequest({
+    method: req.method,
+    path: req.originalUrl,
+    body: req.rawBody ?? '',
+  });
+  proxyReq.setHeader('x-inter-service-signature', signature);
+  proxyReq.setHeader('x-inter-service-timestamp', timestamp);
+  proxyReq.setHeader('x-inter-service-key-id', keyId);
+
   // With forwardStream:false, http-proxy won't end the upstream request for us.
   proxyReq.end();
 });

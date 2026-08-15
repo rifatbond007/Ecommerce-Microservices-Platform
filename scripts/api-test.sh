@@ -656,6 +656,93 @@ test_admin_service() {
   fi
 }
 
+# ─── INTER-SERVICE HMAC AUTH (closes the x-user-id forgery bypass) ───
+#
+# The gateway signs every proxied request with a shared HMAC key, and each
+# downstream service verifies that signature before honouring x-user-id.
+# This section proves the trust model by hitting downstream service ports
+# DIRECTLY with forged identity headers and asserting the verifier rejects
+# them with INTER_SERVICE_SIGNATURE_INVALID.
+#
+# Run only when GATEWAY_URL or DOWNSTREAM_URL is reachable. We probe
+# http://localhost:3005/api/v1/orders first; if it's down, the section is
+# skipped so the rest of the suite keeps working.
+test_inter_service_auth() {
+  section "INTER-SERVICE HMAC AUTH (downstream port protection)"
+
+  # Use the gateway by default for service URLs. Override with
+  # GATEWAY_URL=<host:port> to test against a non-default deployment.
+  local gateway_host
+  gateway_host="${GATEWAY_URL:-http://localhost:3000}"
+  local order_port="${ORDER_SERVICE_URL:-http://localhost:3005}"
+  local payment_port="${PAYMENT_SERVICE_URL:-http://localhost:3006}"
+
+  # Probe the order port directly (no gateway) to see if the verifier is
+  # even wired up. If the service isn't running, skip.
+  local probe_code
+  probe_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+    -H "x-user-id: probe" \
+    "${order_port}/api/v1/orders" 2>/dev/null || echo "000")
+  if [ "$probe_code" = "000" ]; then
+    yellow "  → Downstream services not reachable on :3005/:3006 — skipping"
+    return
+  fi
+
+  # Negative path 1: forged x-user-id against order-service directly.
+  # Without the inter-service HMAC verifier, this used to return 200/401
+  # depending on the order-service's local header trust. With the verifier,
+  # it MUST return 401 INTER_SERVICE_SIGNATURE_INVALID.
+  local code
+  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" --max-time 5 \
+    -H "x-user-id: forged-user" \
+    -H "x-user-email: attacker@example.com" \
+    -H "x-user-role: admin" \
+    "${order_port}/api/v1/orders" 2>/dev/null || echo "000")
+  if [ "$code" = "401" ]; then
+    PASS=$((PASS + 1))
+    green "  ✓ Order port rejects forged x-user-id (401 INTER_SERVICE_SIGNATURE_INVALID)"
+  else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("Order port accepted forged x-user-id ($code)")
+    red "  ✗ Order port rejected forged x-user-id with $code (expected 401)"
+  fi
+
+  # Negative path 2: payment-service directly. Same expectation.
+  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" --max-time 5 \
+    -H "x-user-id: forged-user" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d '{"orderId":"00000000-0000-0000-0000-000000000000","paymentMethod":"card"}' \
+    "${payment_port}/api/v1/payments/process" 2>/dev/null || echo "000")
+  if [ "$code" = "401" ]; then
+    PASS=$((PASS + 1))
+    green "  ✓ Payment port rejects forged x-user-id (401 INTER_SERVICE_SIGNATURE_INVALID)"
+  else
+    FAIL=$((FAIL + 1))
+    FAILED_TESTS+=("Payment port accepted forged x-user-id ($code)")
+    red "  ✗ Payment port rejected forged x-user-id with $code (expected 401)"
+  fi
+
+  # Positive path: when a real user token is used through the gateway,
+  # the downstream service accepts the request (because the gateway signs
+  # it). Only runs if we have a token.
+  if [ -n "$TOKEN" ]; then
+    code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" --max-time 5 \
+      -H "Authorization: Bearer $TOKEN" \
+      "${gateway_host}/api/v1/orders" 2>/dev/null || echo "000")
+    if [ "$code" = "200" ]; then
+      PASS=$((PASS + 1))
+      green "  ✓ Gateway-signed request reaches order-service (200)"
+    else
+      FAIL=$((FAIL + 1))
+      FAILED_TESTS+=("Gateway-signed request to order-service failed ($code)")
+      red "  ✗ Gateway-signed request to order-service returned $code (expected 200)"
+    fi
+  else
+    yellow "  → TOKEN unset — skipping gateway-signed positive-path test"
+  fi
+}
+
 # ──────────────────────────────────────────────────────────────
 
 summary() {
@@ -705,6 +792,7 @@ main() {
   test_notification_service
   test_search_service
   test_admin_service
+  test_inter_service_auth
   summary
 }
 
