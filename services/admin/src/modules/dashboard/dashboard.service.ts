@@ -21,6 +21,11 @@ export class DashboardService {
     };
   }
 
+  async getActivity(limit = 20) {
+    const result = await adminLogRepository.findAll(limit);
+    return { logs: result.logs, total: result.total };
+  }
+
   async logAction(data: {
     action: string;
     entityType: string;

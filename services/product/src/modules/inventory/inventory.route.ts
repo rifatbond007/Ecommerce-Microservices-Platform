@@ -68,26 +68,6 @@ router.get('/variant/:variantId', optionalAuth, inventoryController.getInventory
 
 /**
  * @swagger
- * /inventory/{id}:
- *   get:
- *     tags: [Inventory]
- *     summary: Get inventory by ID
- *     security: [{ bearerAuth: [] }]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200:
- *         description: Inventory record found
- *       404:
- *         description: Inventory not found
- */
-router.get('/:id', optionalAuth, inventoryController.getInventoryById);
-
-/**
- * @swagger
  * /inventory:
  *   post:
  *     tags: [Inventory]
@@ -351,5 +331,28 @@ router.put('/warehouses/:id', authenticate, requireAdminOrSeller, validate(updat
  *         description: Warehouse not found
  */
 router.delete('/warehouses/:id', authenticate, requireAdminOrSeller, warehouseController.deleteWarehouse);
+
+/**
+ * @swagger
+ * /inventory/{id}:
+ *   get:
+ *     tags: [Inventory]
+ *     summary: Get inventory by ID
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Inventory record found
+ *       404:
+ *         description: Inventory not found
+ */
+// NOTE: this catch-all `/:id` GET must come AFTER all literal-path routes
+// (e.g. `/warehouses/all`, `/warehouses/:id`) so that Express does not
+// match `/warehouses/all` against the `/:id` parameter first.
+router.get('/:id', optionalAuth, inventoryController.getInventoryById);
 
 export default router;

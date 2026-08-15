@@ -22,9 +22,11 @@ export const orderNumberSchema = z.object({
 });
 
 export const createReturnSchema = z.object({
-  orderItemId: z.string().uuid(),
-  quantity: z.number().int().positive(),
   reason: z.string().min(1),
+  items: z.array(z.object({
+    productId: z.string().uuid(),
+    quantity: z.number().int().positive(),
+  })).min(1, 'At least one item is required'),
 });
 
 export const orderQuerySchema = z.object({

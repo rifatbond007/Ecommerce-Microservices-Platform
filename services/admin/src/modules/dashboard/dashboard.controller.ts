@@ -21,11 +21,11 @@ export class DashboardController {
 
   async getActivity(_req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const result = await dashboardService.getStats('week');
-      
+      const result = await dashboardService.getActivity();
+
       res.json({
         success: true,
-        data: result.recentActivity,
+        data: result.logs,
       });
     } catch (error) {
       next(error);

@@ -19,8 +19,14 @@ export const updateCartItemSchema = z.object({
 
 export const applyCouponSchema = z.object({
   body: z.object({
-    couponCode: z.string().min(1, 'Coupon code is required'),
-  }),
+    // Accept both `code` (preferred, what api-test sends) and `couponCode`
+    // (legacy/internal callers). Controller normalizes before passing to service.
+    code: z.string().min(1, 'Coupon code is required').optional(),
+    couponCode: z.string().min(1, 'Coupon code is required').optional(),
+  }).refine(
+    (data) => Boolean(data.code || data.couponCode),
+    { message: 'Coupon code is required (provide either `code` or `couponCode`)' }
+  ),
 });
 
 export const cartIdSchema = z.object({
