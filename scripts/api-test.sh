@@ -15,6 +15,11 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 TEST_UUID="00000000-0000-0000-0000-000000000000"
 TEMP_FILE="/tmp/api-test-resp.json"
+# Initialize the temp file so read-only operations (extract_token, extract_refresh)
+# never fail with "No such file or directory" when curl couldn't even open a
+# connection (e.g. gateway down). With `set -euo pipefail`, a missing redirect
+# source terminates the whole script.
+: > "$TEMP_FILE"
 
 PASS=0
 FAIL=0
@@ -130,7 +135,7 @@ setup_auth() {
 {"email": "${AUTH_EMAIL}", "password": "${AUTH_PASSWORD}"}
 EOF
 )
-    curl -s -X POST "${BASE_URL}/api/v1/auth/login" \
+    curl -s --max-time 10 -X POST "${BASE_URL}/api/v1/auth/login" \
       -H "Content-Type: application/json" \
       -d "$login_payload" > "$TEMP_FILE" 2>/dev/null || true
     TOKEN=$(extract_token < "$TEMP_FILE")
@@ -163,7 +168,7 @@ EOF
 )
 
   local code
-  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" -X POST "${BASE_URL}/api/v1/auth/register" \
+  code=$(curl -s -o "$TEMP_FILE" -w "%{http_code}" --max-time 10 -X POST "${BASE_URL}/api/v1/auth/register" \
     -H "Content-Type: application/json" \
     -d "$reg_payload" 2>/dev/null || echo "000")
 
@@ -176,7 +181,7 @@ EOF
 {"email": "${AUTH_EMAIL}", "password": "${AUTH_PASSWORD}"}
 EOF
 )
-    curl -s -X POST "${BASE_URL}/api/v1/auth/login" \
+    curl -s --max-time 10 -X POST "${BASE_URL}/api/v1/auth/login" \
       -H "Content-Type: application/json" \
       -d "$login_payload" > "$TEMP_FILE" 2>/dev/null || true
     TOKEN=$(extract_token < "$TEMP_FILE")
