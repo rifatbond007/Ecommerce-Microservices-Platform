@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import { config } from '../config';
 import { UnauthorizedError } from '../utils/errors';
+import { buildSignedHeaders } from '../utils/sign';
+
+const ME_PATH = '/api/v1/auth/me';
 
 export interface AuthUser {
   userId: string;
@@ -28,8 +31,9 @@ export const authenticate = async (
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
 
-      const response = await axios.get(`${config.authService.url}/api/v1/auth/me`, {
+      const response = await axios.get(`${config.authService.url}${ME_PATH}`, {
         headers: {
+          ...buildSignedHeaders({ method: 'GET', path: ME_PATH, body: '' }),
           Authorization: `Bearer ${token}`,
         },
       });
@@ -74,8 +78,9 @@ export const optionalAuth = async (
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
 
-      const response = await axios.get(`${config.authService.url}/api/v1/auth/me`, {
+      const response = await axios.get(`${config.authService.url}${ME_PATH}`, {
         headers: {
+          ...buildSignedHeaders({ method: 'GET', path: ME_PATH, body: '' }),
           Authorization: `Bearer ${token}`,
         },
       });
