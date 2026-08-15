@@ -2,7 +2,7 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import routes from './routes';
-import { errorHandler, notFoundHandler } from './middleware';
+import { errorHandler, notFoundHandler, verifyInterService } from './middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { prisma } from './repositories/prisma.client';
@@ -32,7 +32,17 @@ export const createApp = (): Express => {
     },
     credentials: true,
   }));
-  app.use(express.json());
+  // Capture raw body bytes for inter-service HMAC verification. Mirrors
+  // the gateway's pattern. The verify callback runs before express.json
+  // parses, so we still get the bytes even for malformed JSON.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    })
+  );
   app.use(express.urlencoded({ extended: true }));
 
   // /live = process-up only (LB restart decisions).
@@ -49,7 +59,10 @@ export const createApp = (): Express => {
   // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  app.use('/api/v1/auth', routes);
+  // Gate every /api/v1/auth/* request on a valid inter-service HMAC.
+  // Public endpoints (login/register/refresh/forgot/reset) are allow-listed
+  // inside the middleware.
+  app.use('/api/v1/auth', verifyInterService, routes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
