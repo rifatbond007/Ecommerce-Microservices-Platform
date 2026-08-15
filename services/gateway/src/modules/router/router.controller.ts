@@ -38,16 +38,16 @@ proxy.on('econnreset', (err, req, res) => {
 });
 
 proxy.on('proxyReq', (proxyReq, req: any) => {
-  if (req.rawBody) {
-    proxyReq.setHeader('Content-Length', Buffer.byteLength(req.rawBody));
-    proxyReq.write(req.rawBody);
-  }
-
   // Inter-service HMAC signing. Downstream services verify the signature
   // before honouring x-user-id/x-user-email/x-user-role headers. Both sides
   // MUST use req.originalUrl as the path string (includes query string).
   // Webhooks are exempt: payment service allow-lists /api/v1/webhooks/* in
   // services/payment/src/utils/verify.ts.
+  //
+  // Headers MUST be set before proxyReq.write()/proxyReq.end() flushes the
+  // outgoing request — once the headers are on the wire, setHeader() throws
+  // "Cannot set headers after they are sent to the client", which under the
+  // uncaughtException handler in src/index.ts kills the gateway.
   const { signature, timestamp, keyId } = signRequest({
     method: req.method,
     path: req.originalUrl,
@@ -56,6 +56,11 @@ proxy.on('proxyReq', (proxyReq, req: any) => {
   proxyReq.setHeader('x-inter-service-signature', signature);
   proxyReq.setHeader('x-inter-service-timestamp', timestamp);
   proxyReq.setHeader('x-inter-service-key-id', keyId);
+
+  if (req.rawBody) {
+    proxyReq.setHeader('Content-Length', Buffer.byteLength(req.rawBody));
+    proxyReq.write(req.rawBody);
+  }
 
   // With forwardStream:false, http-proxy won't end the upstream request for us.
   proxyReq.end();
