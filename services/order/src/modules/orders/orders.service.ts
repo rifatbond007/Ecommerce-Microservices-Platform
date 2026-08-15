@@ -145,25 +145,41 @@ export class OrdersService {
       throw new ValidationError('Can only return delivered orders');
     }
 
-    const orderItem = order.items.find((item: { id: string }) => item.id === input.orderItemId);
-    if (!orderItem) {
-      throw new NotFoundError('Order item');
+    const createdReturns = [];
+    for (const returnItem of input.items) {
+      const orderItem = order.items.find(
+        (item: { productId: string; quantity: number }) =>
+          item.productId === returnItem.productId && item.quantity >= returnItem.quantity
+      );
+      if (!orderItem) {
+        throw new NotFoundError(
+          `Order item for product ${returnItem.productId} with sufficient quantity`
+        );
+      }
+
+      if (returnItem.quantity > orderItem.quantity) {
+        throw new ValidationError(
+          `Return quantity exceeds ordered quantity for product ${returnItem.productId}`
+        );
+      }
+
+      const returnRecord = await orderRepository.createReturn(
+        orderId,
+        orderItem.id,
+        returnItem.quantity,
+        input.reason
+      );
+      createdReturns.push(returnRecord);
+      logger.info('Return created', {
+        orderId,
+        returnId: returnRecord.id,
+        orderItemId: orderItem.id,
+        productId: returnItem.productId,
+        quantity: returnItem.quantity,
+      });
     }
 
-    if (input.quantity > orderItem.quantity) {
-      throw new ValidationError('Return quantity exceeds ordered quantity');
-    }
-
-    const returnRecord = await orderRepository.createReturn(
-      orderId,
-      input.orderItemId,
-      input.quantity,
-      input.reason
-    );
-
-    logger.info('Return created', { orderId, returnId: returnRecord.id });
-
-    return returnRecord;
+    return createdReturns;
   }
 
   async getOrdersByUserId(userId: string, limit: number, offset: number) {
