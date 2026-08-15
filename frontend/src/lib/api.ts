@@ -135,6 +135,10 @@ export const authApi = {
   verifyEmail: (token: string) => api.post('/auth/verify-email', { token }),
   me: () => api.get('/auth/me'),
   sellerStatus: () => api.get('/auth/seller/status'),
+  adminApproveSeller: (userId: string) =>
+    api.post(`/admin/users/${userId}/approve-seller`),
+  adminRejectSeller: (userId: string, reason?: string) =>
+    api.post(`/admin/users/${userId}/reject-seller`, { reason }),
 };
 
 export const userApi = {
@@ -206,7 +210,7 @@ export const orderApi = {
   updateOrderStatus: (id: string, status: string) =>
     api.put(`/orders/${id}/status`, { status }),
   cancelOrder: (id: string) => api.post(`/orders/${id}/cancel`),
-  requestReturn: (id: string, data: { orderItemId: string; quantity: number; reason: string }) =>
+  requestReturn: (id: string, data: { items: { productId: string; quantity: number }[]; reason: string }) =>
     api.post(`/orders/${id}/return`, data),
 };
 
@@ -269,7 +273,10 @@ export const adminApi = {
 export const sellerApi = {
   becomeSeller: (data: Record<string, unknown>) => api.post('/sellers/request', data),
   getStatus: () => api.get('/sellers/status'),
-  getProducts: (params?: Record<string, unknown>) => api.get('/products', { params }),
+  getStats: () => api.get('/sellers/stats'),
+  getOrders: (params?: Record<string, unknown>) => api.get('/sellers/orders', { params }),
+  getEarnings: () => api.get('/sellers/earnings'),
+  getProducts: (params?: Record<string, unknown>) => api.get('/sellers/products', { params }),
   createProduct: (data: Record<string, unknown>) => api.post('/products', data),
   updateProduct: (id: string, data: Record<string, unknown>) =>
     api.put(`/products/${id}`, data),

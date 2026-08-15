@@ -85,7 +85,7 @@ export function CheckoutPage() {
       });
       const id = data?.order?.id || data?.id || data?.orderId;
       if (!id) throw new Error('No order ID returned');
-      await paymentApi.processPayment({ orderId: id, paymentMethod: 'card' });
+      await paymentApi.processPayment({ orderId: id, paymentMethod });
       useCartStore.getState().clearCart();
       setOrderId(id);
       setStep(4);

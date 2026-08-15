@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   ArrowRight, Truck, ShieldCheck, Sparkles, ShoppingBag,
-  Star, Package, Users, Award, ChevronRight,
+  Star, Package, Users, Award, ChevronRight, Quote,
 } from 'lucide-react';
 import { productApi, brandApi } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+
 interface BrandResponse {
   id: string;
   name: string;
@@ -48,14 +52,14 @@ const features = [
 ];
 
 const demoProducts: Product[] = [
-  { id: 'demo-1', name: 'Classic Leather Backpack', basePrice: '89.00', compareAtPrice: '129.00', images: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400'], slug: 'classic-leather-backpack', averageRating: '4.8', reviewCount: 124, totalSold: 320, isFeatured: true, category: { id: 'c1', name: 'Bags', slug: 'bags' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
-  { id: 'demo-2', name: 'Minimalist Watch', basePrice: '245.00', compareAtPrice: null, images: ['https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400'], slug: 'minimalist-watch', averageRating: '4.6', reviewCount: 89, totalSold: 180, isFeatured: true, category: { id: 'c2', name: 'Accessories', slug: 'accessories' }, brand: { id: 'b2', name: 'Nordic', slug: 'nordic' } },
-  { id: 'demo-3', name: 'Wool Blend Sweater', basePrice: '120.00', compareAtPrice: '160.00', images: ['https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=400'], slug: 'wool-blend-sweater', averageRating: '4.7', reviewCount: 56, totalSold: 95, isFeatured: true, category: { id: 'c3', name: 'Clothing', slug: 'clothing' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
-  { id: 'demo-4', name: 'Ceramic Pour-Over Set', basePrice: '55.00', compareAtPrice: null, images: ['https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=400'], slug: 'ceramic-pour-over-set', averageRating: '4.9', reviewCount: 203, totalSold: 510, isFeatured: true, category: { id: 'c4', name: 'Home', slug: 'home' }, brand: { id: 'b3', name: 'Artisan', slug: 'artisan' } },
-  { id: 'demo-5', name: 'Canvas Sneakers', basePrice: '75.00', compareAtPrice: '95.00', images: ['https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400'], slug: 'canvas-sneakers', averageRating: '4.5', reviewCount: 178, totalSold: 420, isFeatured: false, category: { id: 'c3', name: 'Clothing', slug: 'clothing' }, brand: { id: 'b2', name: 'Nordic', slug: 'nordic' } },
-  { id: 'demo-6', name: 'Brass Desk Lamp', basePrice: '95.00', compareAtPrice: null, images: ['https://images.unsplash.com/photo-1507473885765-e6ed057ab6fe?w=400'], slug: 'brass-desk-lamp', averageRating: '4.4', reviewCount: 42, totalSold: 130, isFeatured: false, category: { id: 'c4', name: 'Home', slug: 'home' }, brand: { id: 'b3', name: 'Artisan', slug: 'artisan' } },
-  { id: 'demo-7', name: 'Leather Journal', basePrice: '34.00', compareAtPrice: null, images: ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400'], slug: 'leather-journal', averageRating: '4.3', reviewCount: 67, totalSold: 280, isFeatured: false, category: { id: 'c5', name: 'Stationery', slug: 'stationery' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
-  { id: 'demo-8', name: 'Wireless Headphones', basePrice: '199.00', compareAtPrice: '249.00', images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400'], slug: 'wireless-headphones', averageRating: '4.7', reviewCount: 312, totalSold: 890, isFeatured: false, category: { id: 'c6', name: 'Electronics', slug: 'electronics' }, brand: { id: 'b4', name: 'Pulse', slug: 'pulse' } },
+  { id: 'demo-1', name: 'Classic Leather Backpack', basePrice: '89.00', compareAtPrice: '129.00', images: ['/demo/backpack.svg'], slug: 'classic-leather-backpack', averageRating: '4.8', reviewCount: 124, totalSold: 320, isFeatured: true, category: { id: 'c1', name: 'Bags', slug: 'bags' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
+  { id: 'demo-2', name: 'Minimalist Watch', basePrice: '245.00', compareAtPrice: null, images: ['/demo/watch.svg'], slug: 'minimalist-watch', averageRating: '4.6', reviewCount: 89, totalSold: 180, isFeatured: true, category: { id: 'c2', name: 'Accessories', slug: 'accessories' }, brand: { id: 'b2', name: 'Nordic', slug: 'nordic' } },
+  { id: 'demo-3', name: 'Wool Blend Sweater', basePrice: '120.00', compareAtPrice: '160.00', images: ['/demo/sweater.svg'], slug: 'wool-blend-sweater', averageRating: '4.7', reviewCount: 56, totalSold: 95, isFeatured: true, category: { id: 'c3', name: 'Clothing', slug: 'clothing' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
+  { id: 'demo-4', name: 'Ceramic Pour-Over Set', basePrice: '55.00', compareAtPrice: null, images: ['/demo/pourover.svg'], slug: 'ceramic-pour-over-set', averageRating: '4.9', reviewCount: 203, totalSold: 510, isFeatured: true, category: { id: 'c4', name: 'Home', slug: 'home' }, brand: { id: 'b3', name: 'Artisan', slug: 'artisan' } },
+  { id: 'demo-5', name: 'Canvas Sneakers', basePrice: '75.00', compareAtPrice: '95.00', images: ['/demo/sneakers.svg'], slug: 'canvas-sneakers', averageRating: '4.5', reviewCount: 178, totalSold: 420, isFeatured: false, category: { id: 'c3', name: 'Clothing', slug: 'clothing' }, brand: { id: 'b2', name: 'Nordic', slug: 'nordic' } },
+  { id: 'demo-6', name: 'Brass Desk Lamp', basePrice: '95.00', compareAtPrice: null, images: ['/demo/lamp.svg'], slug: 'brass-desk-lamp', averageRating: '4.4', reviewCount: 42, totalSold: 130, isFeatured: false, category: { id: 'c4', name: 'Home', slug: 'home' }, brand: { id: 'b3', name: 'Artisan', slug: 'artisan' } },
+  { id: 'demo-7', name: 'Leather Journal', basePrice: '34.00', compareAtPrice: null, images: ['/demo/journal.svg'], slug: 'leather-journal', averageRating: '4.3', reviewCount: 67, totalSold: 280, isFeatured: false, category: { id: 'c5', name: 'Stationery', slug: 'stationery' }, brand: { id: 'b1', name: 'Heritage Co.', slug: 'heritage-co' } },
+  { id: 'demo-8', name: 'Wireless Headphones', basePrice: '199.00', compareAtPrice: '249.00', images: ['/demo/headphones.svg'], slug: 'wireless-headphones', averageRating: '4.7', reviewCount: 312, totalSold: 890, isFeatured: false, category: { id: 'c6', name: 'Electronics', slug: 'electronics' }, brand: { id: 'b4', name: 'Pulse', slug: 'pulse' } },
 ];
 
 const demoCategories: Category[] = [
@@ -63,10 +67,6 @@ const demoCategories: Category[] = [
   { id: 'dc2', name: 'Accessories', slug: 'accessories', description: null, children: [], productCount: 56 },
   { id: 'dc3', name: 'Clothing', slug: 'clothing', description: null, children: [], productCount: 89 },
   { id: 'dc4', name: 'Home', slug: 'home', description: null, children: [], productCount: 42 },
-  { id: 'dc5', name: 'Stationery', slug: 'stationery', description: null, children: [], productCount: 18 },
-  { id: 'dc6', name: 'Electronics', slug: 'electronics', description: null, children: [], productCount: 35 },
-  { id: 'dc7', name: 'Footwear', slug: 'footwear', description: null, children: [], productCount: 31 },
-  { id: 'dc8', name: 'Outdoor', slug: 'outdoor', description: null, children: [], productCount: 27 },
 ];
 
 const demoBrands: BrandResponse[] = [
@@ -83,7 +83,10 @@ const stats = [
   { icon: Award, value: '100%', label: 'Satisfaction' },
 ];
 
-/* ── Product Card ── */
+const instaImages = [
+  '/demo/insta-1.svg', '/demo/insta-2.svg', '/demo/insta-3.svg', '/demo/insta-4.svg',
+  '/demo/insta-5.svg', '/demo/insta-6.svg', '/demo/insta-7.svg', '/demo/insta-8.svg',
+];
 
 function ProductCard({ product }: { product: Product }) {
   const navigate = useNavigate();
@@ -94,53 +97,51 @@ function ProductCard({ product }: { product: Product }) {
   const discount = compareNum ? Math.round((1 - priceNum / compareNum) * 100) : 0;
 
   return (
-    <Card className="group">
+    <Card className="group overflow-hidden">
       <Link to={`/products/${product.id}`}>
-        <div className="aspect-square bg-[#f5f5f5] overflow-hidden relative">
+        <div className="aspect-square bg-muted overflow-hidden relative">
           {images[0] ? (
             <img
               src={images[0]}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:opacity-90 transition-opacity duration-300"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-[#666666] text-xs font-bold uppercase tracking-wider">
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-bold uppercase tracking-wider">
               No Image
             </div>
           )}
           {discount > 0 && (
-            <span className="absolute top-2 left-2 bg-[#111111] text-white text-[10px] font-bold px-2 py-1">
-              -{discount}%
-            </span>
+            <Badge className="absolute top-3 left-3">-{discount}%</Badge>
           )}
           {product.totalSold > 50 && (
-            <span className="absolute top-2 right-2 bg-white text-[#111111] text-[10px] font-bold px-2 py-1 border border-[#e5e5e5]">
+            <Badge variant="outline" className="absolute top-3 right-3 bg-background">
               Bestseller
-            </span>
+            </Badge>
           )}
         </div>
       </Link>
       <CardContent className="p-4 pb-5">
-        <div className="flex items-center gap-2 text-[10px] text-[#666666] uppercase tracking-wider mb-1">
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
           {product.brand && <span>{product.brand.name}</span>}
           {product.brand && product.category && <span>·</span>}
           {product.category && <span>{product.category.name}</span>}
         </div>
         <Link to={`/products/${product.id}`}>
-          <h3 className="text-sm font-bold text-[#111111] truncate uppercase tracking-wider">
+          <h3 className="text-sm font-bold text-foreground truncate uppercase tracking-wider">
             {product.name}
           </h3>
         </Link>
         <div className="mt-2 flex items-center gap-2">
-          <span className="text-base font-bold text-[#111111]">${priceNum.toFixed(2)}</span>
+          <span className="text-base font-bold text-foreground">${priceNum.toFixed(2)}</span>
           {compareNum && (
-            <span className="text-xs text-[#666666] line-through">${compareNum.toFixed(2)}</span>
+            <span className="text-xs text-muted-foreground line-through">${compareNum.toFixed(2)}</span>
           )}
         </div>
         {product.reviewCount > 0 && (
           <div className="mt-1 flex items-center gap-1">
-            <Star className="h-3 w-3 fill-[#111111] text-[#111111]" />
-            <span className="text-xs text-[#666666]">
+            <Star className="h-3 w-3 fill-foreground text-foreground" />
+            <span className="text-xs text-muted-foreground">
               {parseFloat(product.averageRating).toFixed(1)} ({product.reviewCount})
             </span>
           </div>
@@ -168,16 +169,20 @@ export function HomePage() {
 
   useEffect(() => {
     Promise.all([
-      productApi.getFeatured().catch(() => ({ data: [] })),
-      productApi.getProducts({ limit: 4 }).catch(() => ({ data: [] })),
-      productApi.getCategoryTree().catch(() => ({ data: [] })),
-      brandApi.getBrands({ limit: 8 }).catch(() => ({ data: [] })),
+      productApi.getFeatured().catch(() => ({ data: [] as Product[] })),
+      productApi.getProducts({ limit: 4 }).catch(() => ({ data: [] as Product[] })),
+      productApi.getCategoryTree().catch(() => ({ data: [] as Category[] })),
+      brandApi.getBrands({ limit: 8 }).catch(() => ({ data: [] as BrandResponse[] })),
     ])
       .then(([featuredRes, newRes, catRes, brandRes]) => {
-        setFeatured(featuredRes.data?.length ? featuredRes.data : demoProducts.filter(p => p.isFeatured));
-        setNewArrivals(newRes.data?.length ? newRes.data : demoProducts.filter(p => !p.isFeatured));
-        setCategories(catRes.data?.length ? catRes.data : demoCategories);
-        setBrands(brandRes.data?.length ? brandRes.data : demoBrands);
+        const featuredData = (featuredRes.data as unknown) as Product[] | undefined;
+        const newData = (newRes.data as unknown) as Product[] | undefined;
+        const catData = (catRes.data as unknown) as Category[] | undefined;
+        const brandData = (brandRes.data as unknown) as BrandResponse[] | undefined;
+        setFeatured(featuredData?.length ? featuredData : demoProducts.filter(p => p.isFeatured));
+        setNewArrivals(newData?.length ? newData : demoProducts.filter(p => !p.isFeatured));
+        setCategories(catData?.length ? catData : demoCategories);
+        setBrands(brandData?.length ? brandData : demoBrands);
       })
       .catch(() => {
         setFeatured(demoProducts.filter(p => p.isFeatured));
@@ -189,160 +194,326 @@ export function HomePage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12">
-      <div className="border border-[#e5e5e5] bg-white">
-      {/* ── Hero ── */}
-      <section className="border-b border-[#e5e5e5]">
-          <div className="px-8 py-20 md:py-28">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
-            Premium E-Commerce
-          </p>
-          <h1 className="mt-6 text-4xl md:text-6xl lg:text-7xl font-bold text-[#111111] leading-[1.05] tracking-tight">
-            Discover Products<br />
-            <span className="text-[#666666]">That Inspire.</span>
-          </h1>
-          <p className="mt-6 text-base md:text-lg text-[#666666] leading-relaxed max-w-xl">
-            Shop the latest trends with confidence. Premium products, curated just for you.
-            Free shipping on all orders over $50.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" onClick={() => navigate('/products')}>
-              Shop Now <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-            <Button variant="outline" size="lg" onClick={() => navigate('/categories')}>
-              Browse Categories <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-          <div className="mt-12 flex flex-wrap gap-x-10 gap-y-4">
-            {stats.map((s) => (
-              <div key={s.label}>
-                <p className="text-2xl md:text-3xl font-bold text-[#111111]">{s.value}</p>
-                <p className="text-xs text-[#666666] uppercase tracking-wider mt-1">{s.label}</p>
+    <div className="bg-background">
+      {/* ── HERO ── */}
+      <section className="relative overflow-hidden">
+        <div className="mx-auto max-w-7xl px-4 py-16 md:py-28">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="lg:col-span-3"
+            >
+              <Badge variant="outline" className="mb-6">
+                Premium E-Commerce
+              </Badge>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-foreground leading-[1.02] tracking-tighter">
+                Discover products<br />
+                <span className="text-muted-foreground">that inspire.</span>
+              </h1>
+              <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
+                Shop the latest trends with confidence. Premium products, curated
+                just for you. Free shipping on all orders over $50.
+              </p>
+              <div className="mt-10 flex flex-wrap gap-3">
+                <Button size="lg" onClick={() => navigate('/products')}>
+                  Shop Now <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="lg" onClick={() => navigate('/categories')}>
+                  Browse Categories
+                </Button>
+                <Button variant="ghost" size="lg" onClick={() => navigate('/register')}>
+                  Create account
+                </Button>
+                <Button variant="link" size="lg" onClick={() => navigate('/about')}>
+                  About us →
+                </Button>
               </div>
-            ))}
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="lg:col-span-2 hidden lg:block"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3">
+                  <div className="aspect-[3/4] bg-muted overflow-hidden">
+                    <img src="/demo/hero-1.svg" alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="aspect-square bg-muted overflow-hidden">
+                    <img src="/demo/hero-2.svg" alt="" className="w-full h-full object-cover" />
+                  </div>
+                </div>
+                <div className="space-y-3 mt-8">
+                  <div className="aspect-square bg-muted overflow-hidden">
+                    <img src="/demo/hero-3.svg" alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="aspect-[3/4] bg-muted overflow-hidden">
+                    <img src="/demo/hero-4.svg" alt="" className="w-full h-full object-cover" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <section className="px-8 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-          {features.map((f) => (
-            <div key={f.title}>
-              <f.icon className="h-5 w-5 text-[#111111]" />
-              <p className="mt-3 text-sm font-bold text-[#111111] uppercase tracking-wider">{f.title}</p>
-              <p className="mt-1 text-xs text-[#666666]">{f.desc}</p>
+      {/* ── MARQUEE BRAND STRIP ── */}
+      <section className="border-y border-border bg-muted/30 overflow-hidden">
+        <div className="flex animate-marquee whitespace-nowrap py-8">
+          {[...Array(2)].map((_, k) => (
+            <div key={k} className="flex items-center gap-12 px-6 shrink-0">
+              {demoBrands.concat(demoBrands).map((b, i) => (
+                <span
+                  key={`${k}-${i}`}
+                  className="text-2xl md:text-3xl font-bold tracking-widest uppercase text-muted-foreground"
+                >
+                  {b.name}
+                </span>
+              ))}
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── Categories ── */}
-  <section className="border-y border-[#e5e5e5]">
-    <div className="px-8 py-16">
-          <div className="flex items-end justify-between mb-10">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
-                Browse By Category
-              </p>
-              <h2 className="mt-2 text-2xl md:text-3xl font-bold text-[#111111]">Categories</h2>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/categories')}>
-              View All <ArrowRight className="h-3 w-3 ml-1" />
-            </Button>
+      {/* ── FEATURES ── */}
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            {features.map((f) => (
+              <div key={f.title}>
+                <f.icon className="h-6 w-6 text-foreground" />
+                <p className="mt-3 text-sm font-bold text-foreground uppercase tracking-wider">{f.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{f.desc}</p>
+              </div>
+            ))}
           </div>
-
-          {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="border border-[#e5e5e5] bg-white p-8 aspect-[3/2]">
-                  <div className="h-4 bg-[#f5f5f5] animate-pulse w-2/3 mx-auto mt-6" />
-                  <div className="h-3 bg-[#f5f5f5] animate-pulse w-1/3 mx-auto mt-3" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {categories.slice(0, 8).map((cat) => (
-                <Link
-                  key={cat.id}
-                  to={`/products?categoryId=${cat.id}`}
-                  className="relative overflow-hidden border border-[#e5e5e5] bg-white p-8 text-center group"
-                >
-                  <span className="absolute inset-y-0 left-0 bg-[#111111] w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
-                  <span className="relative z-10 text-sm font-bold text-[#111111] uppercase tracking-wider group-hover:text-white transition-colors duration-300">
-                    {cat.name}
-                  </span>
-                  {cat.productCount !== undefined && (
-                    <p className="relative z-10 mt-2 text-xs text-[#666666] group-hover:text-white/70 transition-colors duration-300">
-                      {cat.productCount} items
-                    </p>
-                  )}
-                </Link>
-              ))}
-            </div>
-          )}
         </div>
       </section>
 
-      {/* ── Featured Products ── */}
-      <section className="px-8 py-16">
-        <div className="flex items-end justify-between mb-10">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
-              Curated Selection
-            </p>
-            <h2 className="mt-2 text-2xl md:text-3xl font-bold text-[#111111]">Featured Products</h2>
+      {/* ── CATEGORIES (4 large tiles) ── */}
+      <section>
+        <div className="mx-auto max-w-7xl px-4 py-20">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Browse By Category
+              </p>
+              <h2 className="mt-2 text-3xl md:text-5xl font-bold text-foreground tracking-tight">
+                Find your thing
+              </h2>
+            </div>
+            <Button variant="ghost" onClick={() => navigate('/categories')}>
+              View All <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/products')}>
-            View All <ArrowRight className="h-3 w-3 ml-1" />
-          </Button>
-        </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="border border-[#e5e5e5] bg-white">
-                <div className="aspect-square bg-[#f5f5f5] animate-pulse" />
-                <div className="p-4 space-y-2">
-                  <div className="h-3 bg-[#f5f5f5] animate-pulse w-3/4" />
-                  <div className="h-4 bg-[#f5f5f5] animate-pulse w-1/3" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {(loading ? Array.from({ length: 4 }) : categories.slice(0, 4)).map((cat, i) => {
+              const c = cat as Category;
+              return (
+                <Link
+                  key={c?.id ?? i}
+                  to={`/products?categoryId=${c?.id ?? ''}`}
+                  className="group relative overflow-hidden bg-muted aspect-[3/4] flex items-end p-6"
+                >
+                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/80 transition-colors duration-500" />
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-xs font-bold uppercase tracking-wider">
+                    {loading ? 'Loading…' : (
+                      <span className="text-9xl font-black text-muted-foreground/30">
+                        {c.name.charAt(0)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative z-10 w-full">
+                    <p className="text-sm font-bold text-foreground group-hover:text-background uppercase tracking-wider transition-colors duration-500">
+                      {c?.name ?? ''}
+                    </p>
+                    {c?.productCount !== undefined && (
+                      <p className="mt-1 text-xs text-muted-foreground group-hover:text-background/70 transition-colors duration-500">
+                        {c.productCount} items
+                      </p>
+                    )}
+                    <ArrowRight className="mt-3 h-4 w-4 text-foreground group-hover:text-background transition-all duration-500 group-hover:translate-x-1" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURED PRODUCTS — carousel ── */}
+      <section className="border-y border-border bg-muted/30">
+        <div className="mx-auto max-w-7xl px-4 py-20">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Curated Selection
+              </p>
+              <h2 className="mt-2 text-3xl md:text-5xl font-bold text-foreground tracking-tight">
+                Featured
+              </h2>
+            </div>
+            <Button variant="ghost" onClick={() => navigate('/products')}>
+              View All <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="overflow-x-auto -mx-4 px-4">
+            <div className="flex gap-4 snap-x snap-mandatory pb-4">
+              {(loading ? demoProducts : featured).slice(0, 8).map((product) => (
+                <div
+                  key={product.id}
+                  className="min-w-[280px] max-w-[280px] snap-start"
+                >
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRENDING / MOST LOVED tabs ── */}
+      <section>
+        <div className="mx-auto max-w-7xl px-4 py-20">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Shop What&apos;s Hot
+              </p>
+              <h2 className="mt-2 text-3xl md:text-5xl font-bold text-foreground tracking-tight">
+                Trending now
+              </h2>
+            </div>
+            <Tabs defaultValue="trending" className="w-auto">
+              <TabsList>
+                <TabsTrigger value="trending">Trending</TabsTrigger>
+                <TabsTrigger value="loved">Most loved</TabsTrigger>
+                <TabsTrigger value="new">Just in</TabsTrigger>
+              </TabsList>
+              <TabsContent value="trending" />
+              <TabsContent value="loved" />
+              <TabsContent value="new" />
+            </Tabs>
+          </div>
+
+          <Tabs defaultValue="trending" className="w-full">
+            <TabsContent value="trending" className="mt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {(loading ? demoProducts : featured).slice(0, 4).map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="loved" className="mt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {demoProducts.slice(0, 4).map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="new" className="mt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {newArrivals.slice(0, 4).map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </section>
+
+      {/* ── DARK INVERTED BAND: Quote + Newsletter + Instagram ── */}
+      <section className="bg-foreground text-background">
+        <div className="mx-auto max-w-7xl px-4 py-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+            <div>
+              <Quote className="h-10 w-10 text-background/60 mb-4" />
+              <p className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight tracking-tight">
+                &ldquo;The quality and curation here is unmatched. Every order feels
+                like opening a gift I chose for myself.&rdquo;
+              </p>
+              <p className="mt-6 text-sm uppercase tracking-widest text-background/60">
+                — Maya R. · Verified buyer
+              </p>
+            </div>
+            <div className="bg-background text-foreground p-8">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Newsletter
+              </p>
+              <h3 className="mt-2 text-2xl font-bold">Get 10% off</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Your first order, plus early access to new drops and curated edits.
+              </p>
+              <div className="mt-6 flex gap-2">
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  className="flex-1 h-11 px-3 bg-background border border-input text-sm outline-none focus:border-foreground transition-colors"
+                />
+                <Button>Subscribe</Button>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+            {instaImages.map((src, i) => (
+              <a
+                key={i}
+                href="#"
+                className="aspect-square bg-background/10 overflow-hidden block hover:opacity-80 transition-opacity"
+              >
+                <img src={src} alt="" className="w-full h-full object-cover" />
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── STATS BAR ── */}
+      <section className="bg-foreground text-background border-t border-background/10">
+        <div className="mx-auto max-w-7xl px-4 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((s) => (
+              <div key={s.label} className="flex items-center gap-4">
+                <s.icon className="h-8 w-8 text-background/80" />
+                <div>
+                  <p className="text-3xl md:text-4xl font-bold">{s.value}</p>
+                  <p className="text-xs text-background/60 uppercase tracking-widest mt-1">{s.label}</p>
                 </div>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {featured.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
+        </div>
       </section>
 
-      {/* ── Brands ── */}
+      {/* ── BRANDS GRID ── */}
       {!loading && brands.length > 0 && (
-        <section className="border-y border-[#e5e5e5]">
-          <div className="px-8 py-16">
-            <div className="text-center mb-10">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+        <section className="border-b border-border">
+          <div className="mx-auto max-w-7xl px-4 py-20">
+            <div className="text-center mb-12">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Trusted Brands
               </p>
-              <h2 className="mt-2 text-2xl md:text-3xl font-bold text-[#111111]">Shop by Brand</h2>
+              <h2 className="mt-2 text-3xl md:text-5xl font-bold text-foreground tracking-tight">
+                Shop by brand
+              </h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {brands.map((brand) => (
+              {brands.slice(0, 4).map((brand) => (
                 <Link
                   key={brand.id}
                   to={`/products?brandId=${brand.id}`}
-                  className="relative overflow-hidden border border-[#e5e5e5] bg-white p-6 text-center group"
+                  className="group relative overflow-hidden border border-border p-8 text-center hover:border-foreground transition-colors"
                 >
-                  <span className="absolute inset-y-0 left-0 bg-[#111111] w-0 group-hover:w-full transition-all duration-300 ease-in-out" />
-                  <span className="relative z-10 text-sm font-bold text-[#111111] uppercase tracking-wider group-hover:text-white transition-colors duration-300">
+                  <p className="text-base font-bold text-foreground uppercase tracking-wider">
                     {brand.name}
-                  </span>
+                  </p>
                   {brand.description && (
-                    <p className="relative z-10 mt-1 text-xs text-[#666666] line-clamp-2 group-hover:text-white/70 transition-colors duration-300">
+                    <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
                       {brand.description}
                     </p>
                   )}
@@ -353,64 +524,28 @@ export function HomePage() {
         </section>
       )}
 
-      {/* ── New Arrivals ── */}
-      <section className="px-8 py-16">
-        <div className="flex items-end justify-between mb-10">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
-              Fresh From The Collection
-            </p>
-            <h2 className="mt-2 text-2xl md:text-3xl font-bold text-[#111111]">New Arrivals</h2>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/products')}>
-            View All <ArrowRight className="h-3 w-3 ml-1" />
-          </Button>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="border border-[#e5e5e5] bg-white">
-                <div className="aspect-square bg-[#f5f5f5] animate-pulse" />
-                <div className="p-4 space-y-2">
-                  <div className="h-3 bg-[#f5f5f5] animate-pulse w-3/4" />
-                  <div className="h-4 bg-[#f5f5f5] animate-pulse w-1/3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {newArrivals.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
-      </section>
-
       {/* ── CTA ── */}
-      <section className="border-t border-[#e5e5e5]">
-        <div className="px-8 py-16 text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#777777]">
+      <section>
+        <div className="mx-auto max-w-7xl px-4 py-24 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
             Get Started
           </p>
-          <h2 className="mt-3 text-2xl md:text-3xl font-bold text-[#111111]">
-            Ready to Start Shopping?
+          <h2 className="mt-3 text-3xl md:text-5xl font-bold text-foreground tracking-tight">
+            Ready to start shopping?
           </h2>
-          <p className="mt-3 text-sm text-[#666666] max-w-md mx-auto">
+          <p className="mt-4 text-base text-muted-foreground max-w-md mx-auto">
             Join thousands of happy customers. Get access to exclusive deals and new arrivals.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button onClick={() => navigate('/register')}>
-              Create Account <ArrowRight className="h-4 w-4 ml-1" />
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <Button size="lg" onClick={() => navigate('/register')}>
+              Create Account <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={() => navigate('/products')}>
-              Browse Products <ArrowRight className="h-4 w-4 ml-1" />
+            <Button variant="outline" size="lg" onClick={() => navigate('/products')}>
+              Browse Products
             </Button>
           </div>
         </div>
       </section>
-      </div>
     </div>
   );
 }
