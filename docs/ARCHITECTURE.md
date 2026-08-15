@@ -131,6 +131,58 @@ When you add a new event flow: define the exchange name + routing key here first
 
 Token refresh: `POST /api/v1/auth/refresh` (handled by auth service).
 
+### Inter-service trust (HMAC)
+
+Downstream services trust the gateway-forwarded `x-user-*` headers, so anyone
+who can reach a service port directly could otherwise forge identity. To close
+this gap, every proxied request is signed at the gateway and verified by each
+downstream service before any controller code runs.
+
+- **Sign algorithm** — HMAC-SHA256 over `${METHOD}\n${originalUrl}\n${ts}\n${sha256(body)}`.
+  `originalUrl` includes the query string, so `?status=shipped` is part of the
+  signature. Helpers live in `services/gateway/src/utils/sign.ts` and
+  `services/<svc>/src/utils/sign.ts`.
+- **Headers set by the gateway** on every proxied request:
+  - `x-inter-service-signature` — hex HMAC
+  - `x-inter-service-timestamp` — unix seconds
+  - `x-inter-service-key-id` — defaults to `v1`
+- **Verifier** — `services/<svc>/src/utils/verify.ts` exports
+  `verifyInterServiceSignature(...)` and is mounted via
+  `services/<svc>/src/middleware/inter-service.middleware.ts` ahead of the
+  per-route auth middleware in `app.ts`. Enforces:
+  - All three headers present
+  - Timestamp parses as a positive integer
+  - Timestamp within ±`INTER_SERVICE_CLOCK_SKEW_SECONDS` (default 60s) of now
+  - `keyId` matches the configured `INTER_SERVICE_KEY_ID`
+  - HMAC matches (timing-safe equal)
+- **Shared secret** — `INTER_SERVICE_SECRET`, identical across the gateway and
+  all 10 services. In production it MUST NOT be the placeholder value
+  (`__SETME_INTER_SERVICE_SECRET_IN_PROD__`); services refuse to boot. Generate
+  with `openssl rand -base64 48`.
+- **Rejection** — any failure throws `UnauthorizedError`, the global error
+  middleware serializes it to `{ success:false, error:{ code:"INTER_SERVICE_SIGNATURE_INVALID", ... } }`
+  with HTTP 401.
+- **Allow-list** — the payment service allow-lists `/api/v1/webhooks/*` so
+  Stripe webhooks (which carry their own `stripe-signature` header) bypass the
+  HMAC check. The auth service allow-lists the public login/register/refresh
+  endpoints so the browser can reach them directly when the gateway is
+  bypassed in dev/e2e. The admin service skips the check when a request
+  carries `x-internal-admin-call: true` (defence-in-depth; the existing
+  `internalAdminCallGuard` middleware handles that flow).
+- **Outbound signing** — when a service calls another service directly (e.g.
+  payment → order at `:3005`, order → cart at `:3004`), it uses
+  `buildSignedHeaders({ method, path, body })` from its own `src/utils/sign.ts`
+  to attach the three headers. Calls that already go through the gateway
+  (admin → user/order/product) are auto-signed by the gateway.
+- **Direct-path bypass** — the defence-in-depth that ultimately closes the
+  gap is network-level: only the gateway should be reachable on its port. In
+  dev, `scripts/api-test.sh` runs `test_inter_service_auth` to assert forged
+  `x-user-id` requests against `:3005` and `:3006` get 401.
+
+If you add a new inter-service call that doesn't go through the gateway, sign
+it with `buildSignedHeaders`. Every new direct call widens the trust gap
+unless it carries the HMAC.
+
 ## Canonical error shape
 
 Every service throws `AppError(statusCode, errorCode, message[, details])`. Error responses look like:

@@ -3,6 +3,7 @@ import { config } from '../../config';
 import { orderRepository } from '../../repositories';
 import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
+import { buildSignedHeaders } from '../../utils/sign';
 import type { CreateOrderInput, UpdateOrderStatusInput, CreateReturnInput } from './orders.types';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -40,8 +41,16 @@ export class OrdersService {
 
   async createOrder(userId: string, input: CreateOrderInput) {
     try {
-      const cartResponse = await axios.get(`${config.cartService.url}/api/v1/carts/${input.cartId}`, {
-        headers: { 'x-user-id': userId },
+      const cartPath = `/api/v1/carts/${input.cartId}`;
+      const cartResponse = await axios.get(`${config.cartService.url}${cartPath}`, {
+        headers: {
+          ...buildSignedHeaders({
+            method: 'GET',
+            path: cartPath,
+            body: '',
+          }),
+          'x-user-id': userId,
+        },
       });
 
       const cart = cartResponse.data.data;

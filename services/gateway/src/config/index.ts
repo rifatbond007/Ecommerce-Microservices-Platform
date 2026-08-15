@@ -24,6 +24,41 @@ if (jwtSecret === JWT_PLACEHOLDER && process.env.NODE_ENV !== 'production') {
   );
 }
 
+// INTER_SERVICE_SECRET — HMAC key shared with every downstream service so
+// the gateway can sign requests and downstream services can verify that
+// requests reaching their ports originated from the gateway (not an
+// attacker forging x-user-id headers on the internal network). See
+// services/gateway/src/utils/sign.ts and services/*/src/utils/verify.ts.
+const INTER_SERVICE_SECRET_PLACEHOLDER =
+  '__SETME_INTER_SERVICE_SECRET_IN_PROD__';
+const interServiceSecret =
+  process.env.INTER_SERVICE_SECRET || INTER_SERVICE_SECRET_PLACEHOLDER;
+
+if (
+  process.env.NODE_ENV === 'production' &&
+  interServiceSecret === INTER_SERVICE_SECRET_PLACEHOLDER
+) {
+  // eslint-disable-next-line no-console
+  console.error(
+    'FATAL: INTER_SERVICE_SECRET is missing or still a placeholder. ' +
+      'Refusing to start in production. Generate one with `openssl rand -base64 48` ' +
+      'and share it across all services.'
+  );
+  process.exit(1);
+}
+
+if (
+  interServiceSecret === INTER_SERVICE_SECRET_PLACEHOLDER &&
+  process.env.NODE_ENV !== 'production'
+) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[gateway] WARNING: INTER_SERVICE_SECRET is not set; using the dev placeholder. ' +
+      'In production, downstream services will reject every proxied request with ' +
+      'INTER_SERVICE_SIGNATURE_INVALID. Set the same secret in all 10 services.'
+  );
+}
+
 export const config = {
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -70,5 +105,14 @@ export const config = {
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  },
+
+  interService: {
+    secret: interServiceSecret,
+    keyId: process.env.INTER_SERVICE_KEY_ID || 'v1',
+    clockSkewSeconds: parseInt(
+      process.env.INTER_SERVICE_CLOCK_SKEW_SECONDS || '60',
+      10
+    ),
   },
 };
