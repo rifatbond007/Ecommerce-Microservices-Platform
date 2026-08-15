@@ -8,4 +8,7 @@ module.exports = {
     '!src/index.ts',
   ],
   coverageDirectory: 'coverage',
+  moduleNameMapper: {
+    '^@prisma/product$': '<rootDir>/node_modules/.prisma/product',
+  },
 };

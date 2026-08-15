@@ -32,7 +32,8 @@
       "@middleware/*": ["middleware/*"],
       "@utils/*": ["utils/*"],
       "@routes/*": ["routes/*"],
-      "@types/*": ["types/*"]
+      "@types/*": ["types/*"],
+      "@prisma/auth": ["../node_modules/.prisma/auth"]
     }
   },
   "include": ["src/**/*"],
