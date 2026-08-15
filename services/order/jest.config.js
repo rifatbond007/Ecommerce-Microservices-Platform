@@ -11,6 +11,9 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   verbose: true,
+  moduleNameMapper: {
+    '^@prisma/order$': '<rootDir>/node_modules/.prisma/order',
+  },
   transform: {
     '^.+\\.ts$': ['ts-jest', {}],
   },

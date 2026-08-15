@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/user';
 import prisma from './prisma.client';
 
 export interface CreateProfileData {
