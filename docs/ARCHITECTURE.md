@@ -174,6 +174,20 @@ downstream service before any controller code runs.
   `buildSignedHeaders({ method, path, body })` from its own `src/utils/sign.ts`
   to attach the three headers. Calls that already go through the gateway
   (admin → user/order/product) are auto-signed by the gateway.
+
+  Current outbound-signed call sites:
+  - `payment → order` (sign payment → order create, capture, refund) —
+    `services/payment/src/modules/payments/payments.service.ts`
+  - `order → cart` (fetch cart contents before creating an order) —
+    `services/order/src/modules/orders/orders.service.ts`
+  - **/me enrich (7 services)** — every downstream service that verifies a
+    Bearer token by calling `GET /api/v1/auth/me` now signs that call too,
+    because `/me` is behind `verifyInterService` and the auth service
+    rejects unsigned requests with `INTER_SERVICE_SIGNATURE_INVALID`.
+    The 7 signers are: `admin`, `notification`, `order`, `payment`,
+    `product`, `search`, `user`. Each has its own `ME_PATH = '/api/v1/auth/me'`
+    constant and `buildSignedHeaders({ method: 'GET', path: ME_PATH, body: '' })`
+    in `services/<svc>/src/middleware/auth.middleware.ts`.
 - **Direct-path bypass** — the defence-in-depth that ultimately closes the
   gap is network-level: only the gateway should be reachable on its port. In
   dev, `scripts/api-test.sh` runs `test_inter_service_auth` to assert forged

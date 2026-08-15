@@ -4,6 +4,9 @@ import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
+import { buildSignedHeaders } from '../utils/sign';
+
+const ME_PATH = '/api/v1/auth/me';
 
 export interface AuthUser {
   id: string;
@@ -54,8 +57,14 @@ export const authenticate = async (req: AuthRequest, _res: Response, next: NextF
       if (authHeader && authHeader.startsWith('Bearer ')) {
         try {
           const response = await axios.get(
-            `${config.authService.url}/api/v1/auth/me`,
-            { headers: { Authorization: authHeader }, timeout: 3000 }
+            `${config.authService.url}${ME_PATH}`,
+            {
+              headers: {
+                ...buildSignedHeaders({ method: 'GET', path: ME_PATH, body: '' }),
+                Authorization: authHeader,
+              },
+              timeout: 3000,
+            }
           );
           const data = response.data?.data;
           if (data) {
