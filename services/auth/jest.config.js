@@ -18,6 +18,7 @@ module.exports = {
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@routes/(.*)$': '<rootDir>/src/routes/$1',
     '^@types/(.*)$': '<rootDir>/src/types/$1',
+    '^@prisma/auth$': '<rootDir>/node_modules/.prisma/auth',
   },
   transform: {
     '^.+\\.ts$': ['ts-jest', {
