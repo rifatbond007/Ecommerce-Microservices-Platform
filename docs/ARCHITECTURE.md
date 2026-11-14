@@ -140,14 +140,15 @@ downstream service before any controller code runs.
 
 - **Sign algorithm** — HMAC-SHA256 over `${METHOD}\n${originalUrl}\n${ts}\n${sha256(body)}`.
   `originalUrl` includes the query string, so `?status=shipped` is part of the
-  signature. Helpers live in `services/gateway/src/utils/sign.ts` and
-  `services/<svc>/src/utils/sign.ts`.
+  signature. The one implementation lives in `packages/inter-service`
+  (`@ecommerce/inter-service`); each service binds it to its config in
+  `services/<svc>/src/lib/inter-service.ts`.
 - **Headers set by the gateway** on every proxied request:
   - `x-inter-service-signature` — hex HMAC
   - `x-inter-service-timestamp` — unix seconds
   - `x-inter-service-key-id` — defaults to `v1`
-- **Verifier** — `services/<svc>/src/utils/verify.ts` exports
-  `verifyInterServiceSignature(...)` and is mounted via
+- **Verifier** — `verifyInterServiceSignature(...)` from `@ecommerce/inter-service`,
+  mounted via
   `services/<svc>/src/middleware/inter-service.middleware.ts` ahead of the
   per-route auth middleware in `app.ts`. Enforces:
   - All three headers present
@@ -160,7 +161,7 @@ downstream service before any controller code runs.
   (`__SETME_INTER_SERVICE_SECRET_IN_PROD__`); services refuse to boot. Generate
   with `openssl rand -base64 48`.
 - **Rejection** — any failure throws `UnauthorizedError`, the global error
-  middleware serializes it to `{ success:false, error:{ code:"INTER_SERVICE_SIGNATURE_INVALID", ... } }`
+  middleware serializes it to `{ success:false, error:{ code:"UNAUTHORIZED", ... } }`
   with HTTP 401.
 - **Allow-list** — the payment service allow-lists `/api/v1/webhooks/*` so
   Stripe webhooks (which carry their own `stripe-signature` header) bypass the
@@ -171,7 +172,7 @@ downstream service before any controller code runs.
   `internalAdminCallGuard` middleware handles that flow).
 - **Outbound signing** — when a service calls another service directly (e.g.
   payment → order at `:3005`, order → cart at `:3004`), it uses
-  `buildSignedHeaders({ method, path, body })` from its own `src/utils/sign.ts`
+  `buildSignedHeaders({ method, path, body })` from its own `src/lib/inter-service.ts`
   to attach the three headers. Calls that already go through the gateway
   (admin → user/order/product) are auto-signed by the gateway.
 
@@ -183,7 +184,7 @@ downstream service before any controller code runs.
   - **/me enrich (7 services)** — every downstream service that verifies a
     Bearer token by calling `GET /api/v1/auth/me` now signs that call too,
     because `/me` is behind `verifyInterService` and the auth service
-    rejects unsigned requests with `INTER_SERVICE_SIGNATURE_INVALID`.
+    rejects unsigned requests with 401 `UNAUTHORIZED`.
     The 7 signers are: `admin`, `notification`, `order`, `payment`,
     `product`, `search`, `user`. Each has its own `ME_PATH = '/api/v1/auth/me'`
     constant and `buildSignedHeaders({ method: 'GET', path: ME_PATH, body: '' })`

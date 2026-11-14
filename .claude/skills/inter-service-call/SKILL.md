@@ -23,7 +23,7 @@ Always call the target service's own URL from config, e.g. `config.orderService.
 
 ```ts
 import axios from 'axios';
-import { buildSignedHeaders } from '../../utils/sign';
+import { buildSignedHeaders } from '../../lib/inter-service';   // bound to this service's config; core lives in packages/inter-service
 
 const path = `/api/v1/orders/${orderId}`;            // full path INCLUDING query string
 const res = await axios.get(`${config.orderService.url}${path}`, {
@@ -70,7 +70,7 @@ INTER_SERVICE_CLOCK_SKEW_SECONDS=60
 
 ## Testing a new call
 
-Add a case to the calling service's `tests/verify.test.ts`, following the pattern from #11:
+Add a case to the calling service's `tests/auth.middleware.test.ts` (or a test next to the new client), following the pattern from #11. Signature algorithm tests live once in `packages/inter-service/tests/`:
 1. Mock `axios`.
 2. Run the code path.
 3. Assert that the outgoing request has a 64-hex `x-inter-service-signature`, and that `verifyInterServiceSignature` accepts it for the same method and path.

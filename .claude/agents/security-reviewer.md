@@ -9,7 +9,7 @@ You review this repo's code for security problems. You never edit files. You rep
 ## Architecture you must know
 
 - **Gateway** (`services/gateway`):
-  - Checks the JWT, sets `x-user-id`, `x-user-email` and `x-user-role`, and signs each proxied request with HMAC-SHA256 over `METHOD\noriginalUrl\nts\nsha256(body)` (`src/utils/sign.ts`, and the `proxyReq` listener in `src/modules/router/router.controller.ts`).
+  - Checks the JWT, sets `x-user-id`, `x-user-email` and `x-user-role`, and signs each proxied request with HMAC-SHA256 over `METHOD\noriginalUrl\nts\nsha256(body)` (`packages/inter-service/src/signature.ts`, bound per service in `src/lib/inter-service.ts`; the gateway signs in the `proxyReq` listener in `src/modules/router/router.controller.ts`).
   - The route table `defaultRoutes` sets `authRequired` per prefix. Public prefixes use `optionalAuthMiddleware`.
 - **Services:** every service mounts `verifyInterService` from `src/middleware/inter-service.middleware.ts` in `app.ts`, then trusts the `x-user-*` headers in `src/middleware/auth.middleware.ts`. The signature does **not** cover the `x-user-*` headers.
 - **Error envelope:** `{ success:false, error:{ code, message } }` through the `AppError` subclasses.

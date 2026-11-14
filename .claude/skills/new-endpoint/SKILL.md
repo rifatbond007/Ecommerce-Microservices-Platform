@@ -39,7 +39,7 @@ Validate every input: `validate(schema)` for the body, `validateParams(schema)` 
 
 ## 4. Errors
 
-Throw the classes from `src/utils/errors.ts`, never `res.status(...).json` by hand: `ValidationError` (400), `UnauthorizedError` (401), `ForbiddenError` (403), `NotFoundError` (404), `ConflictError` (409), or `AppError(status, CODE, message)`. The envelope must always be `{ success: false, error: { code, message, details? } }`.
+Throw the classes from `@ecommerce/common`, never `res.status(...).json` by hand: `ValidationError` (400), `UnauthorizedError` (401), `ForbiddenError` (403), `NotFoundError` (404), `ConflictError` (409), or `AppError(status, CODE, message)`. The envelope must always be `{ success: false, error: { code, message, details? } }`.
 
 ## 5. Gateway route table
 
