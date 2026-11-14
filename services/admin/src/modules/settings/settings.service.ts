@@ -1,5 +1,5 @@
 import { settingsRepository } from '../../repositories';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError } from '@ecommerce/common';
 import { dashboardService } from '../dashboard/dashboard.service';
 import type { SettingInput, SettingQueryInput } from './settings.types';
 

@@ -1,6 +1,6 @@
 import { reviewRepository } from '../../repositories';
-import { NotFoundError, ForbiddenError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError, ForbiddenError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateReviewInput, UpdateReviewInput } from './reviews.validator';
 
 export interface ReviewResponse {

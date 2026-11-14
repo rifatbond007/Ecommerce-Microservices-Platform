@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/search';
 import prisma from './prisma.client';
-import { logger } from '../utils/logger';
+import { logger } from '../lib/logger';
 
 export class SearchIndexRepository {
   async findByProductId(productId: string) {

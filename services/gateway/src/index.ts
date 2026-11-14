@@ -1,6 +1,6 @@
 import { createApp } from './app';
 import { config } from './config';
-import { logger } from './utils/logger';
+import { logger } from './lib/logger';
 import { initRedis, closeRedis } from './shared/redis/redis.client';
 import { closePrisma } from './shared/prisma/prisma.client';
 

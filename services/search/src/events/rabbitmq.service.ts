@@ -1,6 +1,6 @@
 import amqplib, { Channel, ChannelModel } from 'amqplib';
 import { config } from '../config';
-import { logger } from '../utils/logger';
+import { logger } from '../lib/logger';
 import { searchService } from '../modules/search';
 
 class RabbitMQService {

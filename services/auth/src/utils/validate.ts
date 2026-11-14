@@ -1,6 +1,6 @@
 import { z, ZodSchema } from 'zod';
 import { Request, Response, NextFunction } from 'express';
-import { ValidationError } from './errors';
+import { ValidationError } from '@ecommerce/common';
 
 export const validate = (schema: ZodSchema) => {
   return (req: Request, _res: Response, next: NextFunction) => {

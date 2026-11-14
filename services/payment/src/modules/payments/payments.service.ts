@@ -2,10 +2,10 @@ import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../../config';
 import { paymentRepository, refundRepository } from '../../repositories';
-import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError, ValidationError, ConflictError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import { publishEvent } from '../../utils/rabbitmq';
-import { buildSignedHeaders } from '../../utils/sign';
+import { buildSignedHeaders } from '../../lib/inter-service';
 import type { ProcessPaymentInput, RefundInput, PaymentResponse, RefundResponse } from './payments.types';
 
 function toPaymentResponse(payment: any): PaymentResponse {

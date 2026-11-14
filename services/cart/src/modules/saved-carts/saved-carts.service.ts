@@ -1,6 +1,6 @@
 import { savedCartRepository } from '../../repositories';
-import { NotFoundError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 
 export interface SavedCartItem {
   productId: string;

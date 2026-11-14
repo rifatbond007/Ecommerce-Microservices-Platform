@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
-import { UnauthorizedError } from '../utils/errors';
-import { logger } from '../utils/logger';
+import { UnauthorizedError } from '@ecommerce/common';
+import { logger } from '../lib/logger';
 
 export interface JwtPayload {
   userId: string;

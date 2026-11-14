@@ -40,7 +40,7 @@ if (
 // INTER_SERVICE_SECRET — shared HMAC key used to verify that requests
 // reaching this service originated from the gateway (not an attacker
 // forging identity headers on the internal network). See
-// services/auth/src/utils/verify.ts for the verifier.
+// packages/inter-service/src/signature.ts for the verifier.
 const INTER_SERVICE_SECRET_PLACEHOLDER = '__SETME_INTER_SERVICE_SECRET_IN_PROD__';
 const interServiceSecret =
   process.env.INTER_SERVICE_SECRET || INTER_SERVICE_SECRET_PLACEHOLDER;

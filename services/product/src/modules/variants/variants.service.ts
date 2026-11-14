@@ -1,6 +1,6 @@
 import { productVariantRepository, productRepository } from '../../repositories';
-import { NotFoundError, ConflictError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError, ConflictError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateProductVariantInput, UpdateProductVariantInput } from './variants.validator';
 import type { ProductVariantResponse } from './variants.types';
 

@@ -1,6 +1,6 @@
 import { notificationRepository } from '../../repositories';
-import { NotFoundError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { NotificationResponse, CreateNotificationInput } from './notifications.types';
 
 function toResponse(notification: any): NotificationResponse {

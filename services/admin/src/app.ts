@@ -44,7 +44,6 @@ export const createApp = (): Express => {
   app.get('/ready', readiness);
   app.get('/health', health);
 
-  // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // Loop-break guard for internal admin calls (Bug 3 fix). Runs BEFORE

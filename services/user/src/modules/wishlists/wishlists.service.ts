@@ -1,6 +1,6 @@
 import { wishlistRepository } from '../../repositories';
-import { NotFoundError, ConflictError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError, ConflictError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateWishlistInput, UpdateWishlistInput, AddWishlistItemInput } from './wishlists.validator';
 
 export interface WishlistItemResponse {

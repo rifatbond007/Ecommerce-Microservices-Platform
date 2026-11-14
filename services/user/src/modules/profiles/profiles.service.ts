@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/user';
 import { profileRepository } from '../../repositories';
-import { NotFoundError, ConflictError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError, ConflictError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateProfileInput, UpdateProfileInput } from './profiles.validator';
 
 export interface ProfileResponse {

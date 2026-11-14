@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import { config } from '../config';
-import { UnauthorizedError } from '../utils/errors';
-import { buildSignedHeaders } from '../utils/sign';
+import { UnauthorizedError } from '@ecommerce/common';
+import { buildSignedHeaders } from '../lib/inter-service';
 
 const ME_PATH = '/api/v1/auth/me';
 

@@ -1,6 +1,6 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { config } from '../config';
-import { TokenExpiredError, InvalidTokenError } from './errors';
+import { TokenExpiredError, InvalidTokenError } from '@ecommerce/common';
 
 export interface JwtPayload {
   userId: string;

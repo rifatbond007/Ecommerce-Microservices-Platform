@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import httpProxy from 'http-proxy';
 import { SERVICE_DOCS } from '../../config/swagger';
 import { config } from '../../config';
-import { logger } from '../../utils/logger';
-import { InternalServerError } from '../../utils/errors';
+import { logger } from '../../lib/logger';
+import { InternalServerError } from '@ecommerce/common';
 
 const docsProxy = httpProxy.createProxyServer({
   changeOrigin: true,

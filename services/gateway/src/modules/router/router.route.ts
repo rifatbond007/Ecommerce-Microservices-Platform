@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { routerService } from './router.service';
 import { proxyRequest, defaultRoutes } from './router.controller';
 import { authMiddleware, optionalAuthMiddleware } from '../../middleware/auth.middleware';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 
 const router = Router();
 

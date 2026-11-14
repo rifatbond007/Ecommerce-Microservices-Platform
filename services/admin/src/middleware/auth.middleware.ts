@@ -2,9 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { config } from '../config';
-import { logger } from '../utils/logger';
-import { UnauthorizedError, ForbiddenError } from '../utils/errors';
-import { buildSignedHeaders } from '../utils/sign';
+import { logger } from '../lib/logger';
+import { UnauthorizedError, ForbiddenError } from '@ecommerce/common';
+import { buildSignedHeaders } from '../lib/inter-service';
 
 const ME_PATH = '/api/v1/auth/me';
 

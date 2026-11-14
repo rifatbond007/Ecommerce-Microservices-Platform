@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { config } from '../../config';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError } from '@ecommerce/common';
 import { dashboardService } from '../dashboard/dashboard.service';
 import type { UpdateUserInput, UserQueryInput } from './users.types';
 

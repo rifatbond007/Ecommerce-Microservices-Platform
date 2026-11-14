@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/order';
 import prisma from './prisma.client';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError } from '@ecommerce/common';
 
 export class OrderRepository {
   async findById(orderId: string) {

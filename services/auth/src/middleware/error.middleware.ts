@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError, isPrismaError, handlePrismaError } from '../utils/errors';
-import { logger } from '../utils/logger';
+import { AppError, isPrismaError, handlePrismaError } from '@ecommerce/common';
+import { logger } from '../lib/logger';
 
 export const errorHandler = (
   err: Error,

@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/payment';
 import prisma from './prisma.client';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError } from '@ecommerce/common';
 
 export class RefundRepository {
   async findById(refundId: string) {

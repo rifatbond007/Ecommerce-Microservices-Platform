@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { config } from '../../config';
-import { logger } from '../../utils/logger';
-import { ValidationError } from '../../utils/errors';
+import { logger } from '../../lib/logger';
+import { ValidationError } from '@ecommerce/common';
 import { paymentsService } from '../payments/payments.service';
 import type { StripeWebhookEvent, GenericWebhookEvent } from './webhooks.types';
 

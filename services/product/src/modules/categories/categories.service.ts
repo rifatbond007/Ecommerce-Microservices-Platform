@@ -1,6 +1,6 @@
 import { categoryRepository } from '../../repositories';
-import { NotFoundError, ConflictError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError, ConflictError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateCategoryInput, UpdateCategoryInput } from './categories.validator';
 import type { CategoryResponse, CategoryTreeResponse } from './categories.types';
 

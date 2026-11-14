@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { getRedis, isRedisAvailable } from '../shared/redis/redis.client';
 import { config } from '../config';
-import { RateLimitError } from '../utils/errors';
-import { logger } from '../utils/logger';
+import { RateLimitError } from '@ecommerce/common';
+import { logger } from '../lib/logger';
 
 interface RateLimitEntry {
   count: number;

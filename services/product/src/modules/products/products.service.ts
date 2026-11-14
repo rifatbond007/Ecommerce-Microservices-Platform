@@ -1,6 +1,6 @@
 import { productRepository } from '../../repositories';
-import { NotFoundError, ConflictError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError, ConflictError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateProductInput, UpdateProductInput, ProductQueryInput } from './products.validator';
 import type { ProductResponse, ProductListResponse } from './products.types';
 

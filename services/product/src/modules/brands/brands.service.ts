@@ -1,6 +1,6 @@
 import { brandRepository } from '../../repositories';
-import { NotFoundError, ConflictError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError, ConflictError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateBrandInput, UpdateBrandInput } from './brands.validator';
 import type { BrandResponse } from './brands.types';
 

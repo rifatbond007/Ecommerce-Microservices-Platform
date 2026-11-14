@@ -1,6 +1,6 @@
 import { addressRepository } from '../../repositories';
-import { NotFoundError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateAddressInput, UpdateAddressInput } from './addresses.validator';
 
 export interface AddressResponse {

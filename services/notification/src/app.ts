@@ -39,7 +39,6 @@ export const createApp = (): Express => {
   app.get('/ready', readiness);
   app.get('/health', health);
 
-  // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // Gate every /api/v1/* request on a valid inter-service HMAC.

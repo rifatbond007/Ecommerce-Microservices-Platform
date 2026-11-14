@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { webhooksService } from './webhooks.service';
-import { ValidationError } from '../../utils/errors';
+import { ValidationError } from '@ecommerce/common';
 
 /**
  * Captures the raw request body so Stripe signature verification can be done later.

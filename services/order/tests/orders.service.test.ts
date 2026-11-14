@@ -191,7 +191,7 @@ describe('OrdersService', () => {
           shippingAddressId: 'addr-1',
           billingAddressId: 'addr-1',
         })
-      ).rejects.toThrow('Failed to create order');
+      ).rejects.toThrow('Cart is empty');
     });
   });
 

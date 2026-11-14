@@ -1,6 +1,6 @@
 import Redis from 'ioredis';
 import { config } from '../../config';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 
 let redis: Redis | null = null;
 let redisAvailable = false;

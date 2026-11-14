@@ -1,6 +1,6 @@
 import amqp, { Channel, ChannelModel } from 'amqplib';
 import { config } from '../config';
-import { logger } from './logger';
+import { logger } from '../lib/logger';
 
 let connection: ChannelModel | null = null;
 let channel: Channel | null = null;

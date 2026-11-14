@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ValidationError } from './errors';
+import { ValidationError } from '@ecommerce/common';
 
 export const validate = <T extends z.ZodSchema>(schema: T, data: unknown): z.infer<T> => {
   const result = schema.safeParse(data);

@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import httpProxy from 'http-proxy';
 import { config } from '../../config';
-import { logger } from '../../utils/logger';
-import { ServiceUnavailableError } from '../../utils/errors';
-import { signRequest } from '../../utils/sign';
+import { logger } from '../../lib/logger';
+import { ServiceUnavailableError } from '@ecommerce/common';
+import { signRequest } from '../../lib/inter-service';
 
 const proxy = httpProxy.createProxyServer({
   changeOrigin: true,
@@ -42,7 +42,7 @@ proxy.on('proxyReq', (proxyReq, req: any) => {
   // before honouring x-user-id/x-user-email/x-user-role headers. Both sides
   // MUST use req.originalUrl as the path string (includes query string).
   // Webhooks are exempt: payment service allow-lists /api/v1/webhooks/* in
-  // services/payment/src/utils/verify.ts.
+  // services/payment/src/middleware/inter-service.middleware.ts.
   //
   // Headers MUST be set before proxyReq.write()/proxyReq.end() flushes the
   // outgoing request — once the headers are on the wire, setHeader() throws

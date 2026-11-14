@@ -6,7 +6,7 @@ import routes from './routes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import { errorMiddleware, notFoundMiddleware, rateLimitMiddleware } from './middleware';
-import { logger } from './utils/logger';
+import { logger } from './lib/logger';
 import { config } from './config';
 import { prisma } from './shared/prisma/prisma.client';
 import { isRedisAvailable } from './shared/redis/redis.client';
@@ -105,7 +105,6 @@ export const createApp = (): Application => {
     })
   );
 
-  // @ts-expect-error — swagger-ui-express types lag Express 4.22
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   app.use(routes);

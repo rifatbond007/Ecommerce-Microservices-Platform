@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../shared/prisma/prisma.client';
 import { ServiceRoute, defaultRoutes, getTargetUrl } from './router.controller';
-import { logger } from '../../utils/logger';
-import { NotFoundError } from '../../utils/errors';
+import { logger } from '../../lib/logger';
+import { NotFoundError } from '@ecommerce/common';
 
 export class RouterService {
   private routes: ServiceRoute[] = [];

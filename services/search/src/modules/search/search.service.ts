@@ -1,5 +1,5 @@
 import { searchIndexRepository, searchLogRepository } from '../../repositories';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 import type { SearchResult, SearchSuggestionsResponse, TrendingResponse } from './search.types';
 
 function toSearchResult(item: any): SearchResult {

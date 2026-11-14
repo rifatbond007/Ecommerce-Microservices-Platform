@@ -22,8 +22,8 @@ import {
   ConflictError,
   NotFoundError,
   UnauthorizedError,
-} from '../../utils/errors';
-import { logger } from '../../utils/logger';
+} from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type {
   RegisterInput,
   LoginInput,

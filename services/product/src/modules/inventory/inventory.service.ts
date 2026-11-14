@@ -1,6 +1,6 @@
 import { inventoryRepository, warehouseRepository, productRepository } from '../../repositories';
-import { NotFoundError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { CreateInventoryInput, InventoryQueryInput, CreateWarehouseInput, UpdateWarehouseInput } from './inventory.validator';
 import type { InventoryResponse, PaginatedInventoryResponse, WarehouseResponse } from './inventory.types';
 

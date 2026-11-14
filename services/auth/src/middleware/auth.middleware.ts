@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, JwtPayload } from '../utils/jwt';
-import { UnauthorizedError } from '../utils/errors';
+import { UnauthorizedError } from '@ecommerce/common';
 
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;

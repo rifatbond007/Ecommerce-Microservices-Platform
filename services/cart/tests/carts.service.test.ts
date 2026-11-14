@@ -37,7 +37,7 @@ jest.mock('../src/repositories', () => ({
   },
 }));
 
-jest.mock('../src/utils/logger', () => ({
+jest.mock('../src/lib/logger', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),

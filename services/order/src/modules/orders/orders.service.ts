@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { config } from '../../config';
 import { orderRepository } from '../../repositories';
-import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
-import { buildSignedHeaders } from '../../utils/sign';
+import { NotFoundError, ValidationError, ConflictError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
+import { buildSignedHeaders } from '../../lib/inter-service';
 import type { CreateOrderInput, UpdateOrderStatusInput, CreateReturnInput } from './orders.types';
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];

@@ -1,6 +1,6 @@
 import { createApp } from './app';
 import { config } from './config';
-import { logger } from './utils/logger';
+import { logger } from './lib/logger';
 import { prisma } from './repositories';
 import { initRabbitMQ, closeRabbitMQ, consumeEvents } from './utils/rabbitmq';
 import { paymentsService } from './modules/payments';

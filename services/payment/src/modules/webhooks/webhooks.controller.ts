@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { paymentsService } from '../payments/payments.service';
-import { logger } from '../../utils/logger';
+import { logger } from '../../lib/logger';
 
 export class WebhooksController {
   async handleStripeWebhook(req: Request, res: Response, _next: NextFunction) {

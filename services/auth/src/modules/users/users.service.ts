@@ -1,6 +1,6 @@
 import { userRepository } from '../../repositories';
-import { NotFoundError } from '../../utils/errors';
-import { logger } from '../../utils/logger';
+import { NotFoundError } from '@ecommerce/common';
+import { logger } from '../../lib/logger';
 import type { UserResponse } from '../auth/auth.types';
 import type { UpdateProfileInput } from './users.validator';
 

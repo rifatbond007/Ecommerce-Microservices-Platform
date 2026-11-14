@@ -28,7 +28,7 @@ if (jwtSecret === JWT_PLACEHOLDER && process.env.NODE_ENV !== 'production') {
 // the gateway can sign requests and downstream services can verify that
 // requests reaching their ports originated from the gateway (not an
 // attacker forging x-user-id headers on the internal network). See
-// services/gateway/src/utils/sign.ts and services/*/src/utils/verify.ts.
+// packages/inter-service/src/signature.ts.
 const INTER_SERVICE_SECRET_PLACEHOLDER =
   '__SETME_INTER_SERVICE_SECRET_IN_PROD__';
 const interServiceSecret =
