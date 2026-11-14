@@ -4,10 +4,12 @@
   "private": true,
   "description": "E-commerce Microservices Platform",
   "workspaces": [
-    "services/*",
-    "packages/*"
+    "packages/*",
+    "services/*"
   ],
   "scripts": {
+    "postinstall": "npm run build:packages",
+    "build:packages": "npm run build --workspace=packages/common --workspace=packages/inter-service",
     "dev:gateway": "npm run dev --workspace=services/gateway",
     "dev:auth": "npm run dev --workspace=services/auth",
     "dev:user": "npm run dev --workspace=services/user",
@@ -16,15 +18,23 @@
     "dev:order": "npm run dev --workspace=services/order",
     "dev:payment": "npm run dev --workspace=services/payment",
     "dev:all": "concurrently \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:product\" \"npm run dev:cart\" \"npm run dev:order\" \"npm run dev:payment\"",
-    "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces",
-    "lint": "npm run lint --workspaces",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
     "dev:native": "bash scripts/dev.sh",
     "dev:native:status": "bash scripts/dev.sh status",
     "dev:native:stop": "bash scripts/dev.sh stop"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.20",
+    "@typescript-eslint/eslint-plugin": "^7.0.1",
+    "@typescript-eslint/parser": "^7.0.1",
     "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
     "typescript": "^5.3.3"
   },
   "engines": {

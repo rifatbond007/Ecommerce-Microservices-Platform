@@ -1,0 +1,25 @@
+{
+  "name": "@ecommerce/inter-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HMAC request signing and verification between the gateway and services",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "@ecommerce/common": "*"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0"
+  },
+  "devDependencies": {
+    "@ecommerce/tsconfig": "*"
+  }
+}
